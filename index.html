@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>크롤리의 집</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500&display=swap">
+<style>
+/* 레이아웃: 어두운 평면도 한 장. 방은 칸으로 놓이고, 누르면 그 칸 안에 물건이 펼쳐진다. 객식구 복도는 아래로 길게 빠진다. */
+:root{
+  color-scheme: dark;
+  --bg:#0d1117;
+  --room:#141a23;
+  --room-deep:#10151d;
+  --line:#2a3443;
+  --ink:#dce3eb;
+  --muted:#8592a4;
+  --crimson:#c9475d;
+  --teal:#7bbac7;
+  --note:#e6d78e;
+  --note-ink:#2b2718;
+  --board:#e8ecef;
+  --board-ink:#1b2937;
+  --f-disp:'Gowun Batang','Noto Serif KR',serif;
+  --f-body:'IBM Plex Sans KR','Noto Sans KR',system-ui,sans-serif;
+  --f-hand:'Gaegu','Nanum Pen Script',cursive;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.6;
+  padding-block:28px 48px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap{max-width:980px; margin:0 auto}
+h1{font-family:var(--f-disp); font-weight:700; font-size:30px; margin:0 0 4px; letter-spacing:.02em; text-wrap:balance}
+.lede{margin:0 0 22px; color:var(--muted); max-width:60ch}
+button{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
+
+.plan{
+  display:grid; gap:10px; grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-areas:"entry entry entry" "study living kitchen" "util . ."; align-items:start;
+}
+@media (max-width:760px){
+  .plan{grid-template-columns:minmax(0,1fr); grid-template-areas:"entry" "living" "kitchen" "study" "util"}
+}
+.room{
+  position:relative; background:var(--room); border:1px solid var(--line); border-left:3px solid #6b2a37; border-radius:3px;
+  min-width:0;
+}
+.room[data-open="true"]{border-color:#3b6a76; border-left-color:var(--crimson)}
+.room-head{
+  display:flex; justify-content:space-between; align-items:baseline; gap:10px; width:100%;
+  background:none; border:0; text-align:left; padding:14px 14px 12px; cursor:pointer;
+}
+.rn{font-family:var(--f-disp); font-size:20px; font-weight:700}
+.rh{font-size:12px; color:var(--muted); letter-spacing:.06em}
+.room-head:hover .rh{color:var(--teal)}
+.room[data-tv="on"] .rn::after,.room[data-tv="scare"] .rn::after{
+  content:""; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--teal); margin-left:9px; vertical-align:middle;
+  animation:pulse 1.2s ease-in-out infinite;
+}
+.leak{min-height:1.6em; margin:0; padding:0 14px 12px; font-family:var(--f-disp); font-size:14px; color:var(--crimson); opacity:0; transition:opacity .6s}
+.leak.show{opacity:1}
+.sign{
+  margin:0 14px 12px; display:inline-block; border:1px solid var(--crimson); color:var(--crimson);
+  font-size:12px; letter-spacing:.12em; padding:2px 8px;
+}
+.room-body{padding:0 0 6px}
+.obj{border-top:1px dashed var(--line); padding:12px 14px; display:grid; gap:8px; min-width:0}
+.obj h3{margin:0; font-size:12px; font-weight:500; letter-spacing:.1em; color:var(--muted)}
+.flavor{margin:0}
+.btn{background:transparent; border:1px solid var(--line); border-radius:3px; padding:6px 12px; cursor:pointer; min-height:34px}
+.btn:hover{border-color:var(--teal)}
+.row{display:flex; gap:8px; flex-wrap:wrap}
+.row input{flex:1 1 120px; min-width:0}
+input[type=text]{
+  font:inherit; color:var(--ink); background:var(--room-deep); border:1px solid var(--line); border-radius:3px; padding:6px 10px; min-height:34px;
+}
+input[type=text]::placeholder{color:var(--muted)}
+/* 다용도실: 눈에 잘 안 띄는 구석 */
+.room[data-room="util"]{justify-self:start; width:150px; max-width:100%; opacity:.55; border-left-color:var(--line)}
+.room[data-room="util"] .rn{font-size:14px}
+.room[data-room="util"] .rh{display:none}
+.room[data-room="util"]:hover,.room[data-room="util"][data-open="true"]{opacity:1}
+.room[data-room="util"][data-open="true"]{width:230px}
+[hidden]{display:none!important}
+textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px solid var(--line); border-radius:3px; padding:6px 10px; width:100%; resize:vertical}
+
+.hint{margin:0; font-size:12px; color:var(--muted)}
+.empty{margin:0; font-size:13px; color:var(--muted)}
+
+/* 텔레비전 */
+.tv{
+  position:relative; overflow:hidden; aspect-ratio:16/9; max-width:100%; display:grid; place-items:center; text-align:center;
+  padding:12px; background:#090c11; border:2px solid #222d3b; color:var(--muted); font-size:13px;
+}
+.tv.on{background:#13222c; color:var(--ink)}
+.tv.on.drama{background:#231f2d}
+.tv.on.msg::before{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(255,255,255,.06) 0 1px, transparent 1px 3px);
+  animation:roll .5s steps(3) infinite;
+}
+.tv.scare{background:#2c0b12; color:#ff8a9c; font-family:var(--f-disp); font-size:clamp(18px,5vw,28px); font-weight:700; animation:shake .14s linear infinite}
+.tv span{position:relative}
+.tvwrap{display:grid; gap:8px; justify-items:start}
+
+/* 메모와 화이트보드 */
+.sticky{
+  background:var(--note); color:var(--note-ink); font-family:var(--f-hand); font-size:20px; line-height:1.35;
+  padding:12px 14px; transform:rotate(-1deg); max-width:30ch; box-shadow:0 2px 0 rgba(0,0,0,.35);
+}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chip[aria-pressed="true"]{border-color:var(--teal); color:var(--teal)}
+.whiteboard{background:var(--board); color:var(--board-ink); font-family:var(--f-hand); font-size:24px; line-height:1.4; padding:16px 20px; border:4px solid #9aa6b2; min-height:260px}
+.whiteboard ul{list-style:none; margin:0; padding:0; display:grid; gap:4px}
+.whiteboard li{display:flex; justify-content:space-between; gap:8px; align-items:baseline; border-bottom:1px dashed #c3ccd5}
+.whiteboard .t{min-width:0; overflow-wrap:anywhere}
+.whiteboard .empty{color:#5e6c7a}
+.erase{font:12px var(--f-body); background:none; border:1px solid #9aa6b2; color:#5e6c7a; border-radius:3px; cursor:pointer; padding:0 6px}
+.gb{list-style:none; margin:0; padding:0; display:grid; gap:8px}
+.gb li{border-left:2px solid var(--line); padding-left:10px; min-width:0}
+.gb .who{font-weight:500}
+.gb .when{font-size:12px; color:var(--muted); margin-left:6px}
+.gb .msg{margin:0; overflow-wrap:anywhere}
+.gb .del{margin-top:2px; font-size:12px; min-height:0; padding:1px 8px; color:var(--crimson); border-color:#5a2a34}
+.foods{display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:6px}
+.food{text-align:center; padding:8px 6px; background:var(--room-deep); overflow-wrap:anywhere}
+
+.doors{display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap}
+.graydoor,.odd{position:relative; width:88px; height:140px; padding:0; cursor:pointer; border-radius:2px}
+.graydoor{background:#6d737b; border:1px solid #868d96; box-shadow:inset 0 0 0 6px rgba(0,0,0,.18)}
+.graydoor.open{background:#242930; border-color:#39414b; cursor:default}
+.odd{background:#1a1316; border:1px solid #4a2630; box-shadow:inset 0 0 0 6px rgba(0,0,0,.35), 0 10px 16px -10px var(--teal)}
+.graydoor::after,.odd::after{content:""; position:absolute; right:12px; top:68px; width:7px; height:7px; border-radius:50%; background:#aab1b9}
+.odd::after{background:#7a3a47}
+.graydoor.open::after{background:#4a525c}
+.graydoor.shake{animation:shake .18s linear}
+
+/* 객식구 복도 */
+.corridor{margin-top:14px; border:1px solid var(--line); background:var(--room-deep); padding:14px 14px 10px; border-radius:3px}
+.corridor h2{margin:0; font-family:var(--f-disp); font-size:18px}
+.corridor .sub{margin:2px 0 12px; font-size:13px; color:var(--muted)}
+.hall{display:flex; gap:12px; overflow-x:auto; padding:4px 2px 12px}
+.door{
+  flex:0 0 100px; height:156px; border:1px solid rgba(255,255,255,.14); border-radius:2px; cursor:pointer;
+  display:grid; align-items:end; justify-items:center; padding:0 6px 12px; text-align:center; background:var(--dc);
+  box-shadow:inset 0 0 0 5px rgba(0,0,0,.22);
+}
+.door:hover{border-color:var(--teal)}
+.door[aria-pressed="true"]{border-color:var(--teal); box-shadow:inset 0 0 0 5px rgba(0,0,0,.22), 0 0 0 2px var(--teal)}
+.plate{white-space:pre-line; background:rgba(0,0,0,.45); font-size:12px; padding:2px 8px; border-radius:2px; overflow-wrap:anywhere}
+.guestdesc{margin:4px 0 0; min-height:3em; font-family:var(--f-disp)}
+.foot{margin:18px 0 0; font-size:12px; color:var(--muted)}
+
+@keyframes roll{to{background-position:0 3px}}
+@keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(-3px,2px)}50%{transform:translate(3px,-2px)}75%{transform:translate(-2px,-2px)}100%{transform:translate(0,0)}}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){
+  .tv.on::before,.tv.scare,.room[data-tv] .rn::after{animation:none}
+  .leak{transition:none}
+  .graydoor.shake{animation:none}
+}
+</style>
+
+<main class="wrap">
+  <h1>크롤리의 집</h1>
+  <p class="lede">초인종은 누를 필요 없습니다. 방을 눌러서 들어와 보세요. 잠기지 않은 부분은 편하게 구경하셔도 됩니다.</p>
+
+  <div class="plan" id="plan">
+    <section class="room" data-room="entry" style="grid-area:entry">
+      <button class="room-head" type="button" aria-expanded="false" aria-controls="b-entry"><span class="rn">현관</span><span class="rh">들어가기</span></button>
+      <div class="room-body" id="b-entry" hidden></div>
+    </section>
+    <section class="room" data-room="study" style="grid-area:study">
+      <button class="room-head" type="button" aria-expanded="false" aria-controls="b-study"><span class="rn">서재</span><span class="rh">잠겨 있음</span></button>
+      <p class="leak" id="leak" aria-live="polite"></p>
+      <div class="room-body" id="b-study" hidden></div>
+    </section>
+    <section class="room" data-room="living" data-tv="off" style="grid-area:living">
+      <button class="room-head" type="button" aria-expanded="false" aria-controls="b-living"><span class="rn">거실</span><span class="rh">들어가기</span></button>
+      <div class="room-body" id="b-living" hidden></div>
+    </section>
+    <section class="room" data-room="kitchen" style="grid-area:kitchen">
+      <button class="room-head" type="button" aria-expanded="false" aria-controls="b-kitchen"><span class="rn">부엌</span><span class="rh">들어가기</span></button>
+      <p class="sign">네이선 출입금지</p>
+      <div class="room-body" id="b-kitchen" hidden></div>
+    </section>
+    <section class="room" data-room="util" style="grid-area:util">
+      <button class="room-head" type="button" aria-expanded="false" aria-controls="b-util"><span class="rn">다용도실</span><span class="rh">들어가기</span></button>
+      <div class="room-body" id="b-util" hidden></div>
+    </section>
+  </div>
+
+  <section class="corridor" aria-labelledby="hall-title">
+    <h2 id="hall-title">객식구 복도</h2>
+    <p class="sub">밖에서 보이는 것보다 훨씬 깁니다. 쭉 살펴보세요.</p>
+    <div class="hall" id="hall"></div>
+    <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
+  </section>
+
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다.</p>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, doc, setDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* 공개용 설정값입니다. 비밀 키가 아니라서 페이지에 들어 있어도 됩니다. 안전은 Firestore 보안 규칙이 지킵니다. */
+const firebaseConfig = {
+  apiKey: "AIzaSyDI5yyUZcGZ6JUF1kxzgHOuNDAXgIWSpXU",
+  authDomain: "crowley-house.firebaseapp.com",
+  projectId: "crowley-house",
+  storageBucket: "crowley-house.firebasestorage.app",
+  messagingSenderId: "824819455861",
+  appId: "1:824819455861:web:5f32e0fa86c0b4cae5253c",
+  measurementId: "G-TB7B3N4MB9"
+};
+
+(function(){
+'use strict';
+
+/* ===== 글 내용: 대사, 멘트, 설명은 여기만 고치면 됩니다 (아래는 임시 예시 문장) ===== */
+var CONTENT = {
+  throne: '비어 있다. 맞은편 텔레비전을 노려보는 각도로 놓여 있다.',
+  tv: [
+    '지직거리는 소음 사이로 글자가 떠오른다. 「보고서 제출 기한이 어제였습니다.」',
+    '「여기는 아래층. 응답하십시오. 응답하십시오.」',
+    '「오늘의 징조: 흐림. 이유는 묻지 마십시오.」',
+'「지옥의 배신자에게는 언제나 모든 것이 너무 늦었습니다.」',
+'「끝을 마주하십시오.」'
+
+
+  ],
+  tvScare: '…끄라고 했을 텐데.',
+  drama: [
+    '채널 7. 드라마 재방송. 두 사람이 비 오는 창가에서 말없이 서 있다.',
+    '채널 3. 주말 드라마. 누군가 문을 쾅 닫고 나간다. 이어서 광고.',
+    '채널 11. 요리 프로그램. 오믈렛을 뒤집는 데 세 번 실패한다.',
+  '채널 12. 신께서는 내 인생의 배관공이시라네, 하는 이상한 CCM이 흘러나온다.',
+  '채널 5, 가드닝 프로그램이 켜져 있다. 식물과 대화하기에 대한 내용이다.',
+  '채널 4004. 지직거리는 화면이 떴다가 꺼진다.',
+
+
+
+  ],
+  phone: [
+    '앤서니 크롤리입니다. 지금 자리에 없으니 스타일리쉬하게 메세지를 남겨주세요. 챠오',
+    '삐—. 새 메시지가 도착했습니다. (아무 말 없이 숨소리가 3초 이어진다)',
+    '삐—. 새 메시지가 도착했습니다. 크롤리? 나야. 저번에 구하던 책을 찾았어!',
+    '삐—. 새 메시지가 도착했습니다. 그래, 이번에 그 사람들을 도와 줬단 말이지. 정말 뿌듯하지 않아?',
+    '삐—. 새 메시지가 도착했습니다. 형! 여기로 걸면 연결되는 거 맞지? 지금 좀 지직거려도 이해해 우주의 전파가 너무 왜곡되고 있는 것 같아',
+    '삐—. 새 메시지가 도착했습니다. 크롤리, 내가 생각해 봤는데-',
+    '삐—. 너무 늦었어.',
+    '삐—. 자니?',
+    '삐—. 테이블 야자 잘 있어요?',
+    '삐—. 오늘 야근이니 알아 두게.',
+    '삐—. 크롤리, 제 택배 좀 받아 줄 수 있어요?',
+    '삐—. 아빠, 조만간 한 번 찾아뵙고 말씀드릴 건데요. 간다고 알려드리려고요.',
+    '삐—. 자는 거야?',
+    '삐—. 스타일리쉬.',
+    '삐—. 새 메시지가 도착했습니다. 저번에 찾던 거 아직 구하냐고, 가격 비싸게 쳐줄 거지?',
+    '삐—. 있잖아요. 크롤리, 제가 조만간 또 찾아가려고요. 괜찮아요. 이번엔 힘들어서 간다는 게 아니고요. 그냥 얼굴이 좀 보고 싶을 수도 있잖아요.',
+    '(지직) 아래층 사무실입니다. 서명하신 서류에 한 장이 빠졌습니다. 다시 연락드리겠습니다.',
+    '(지직) 아래에서 가장 깊은 곳의 분들이 당신께 할 말씀이 있다고 하십니다.',
+    '(지직) 화분 배달 건입니다. 식물에게 말을 걸어주지 않아 시들었다는 항의가 들어왔습니다.',
+    '삐—. 「…여보세요? 끊지 마. 거기 있는 거 알아.」'
+  ],
+  tableItems: ['식은 커피잔','포장된 디저트 박스','카드 한 벌','파란 경찰 부스 키링','싱글 몰트 위스키 반 병','오만과 편견','눈알 모양 젤리 한 봉지','휘갈겨 쓴 메모지','읽다 만 책','검은 안경','열쇠 꾸러미','촛대','빈 와인잔','릿츠 영수증 한 장','시든 장미 한 송이'],
+  shoes: ['반들반들한 검은 뱀 가죽 구두','진흙 묻은 부츠','끈 풀린 운동화','슬리퍼 한 짝','처음 보는 구두','굽이 닳은 로퍼','말끔한 구두','옆면이 닳은 구두','러닝화'],
+  foods: ['오믈렛','사과 반쪽','에그 인 헬','티라미수','남은 피자','포도','요거트','딤섬','잼 병','푸딩','초콜릿','레몬','샐러드','수상한 병',
+    '푸아그라','트러플 리조또','캐비어 한 스푼','랍스터 테르미도르','마카롱 상자','크렘 브륄레','와규 스테이크','생굴 한 접시','연어 카나페','샴페인 한 병','에클레어','프로슈토 멜론','비프 웰링턴','밀푀유'],
+  notice: '외출 중. 돌아오는 시간은 미정.',
+  study: [
+    '누구야. 문 두드리지 마.',
+    '…식물들, 오늘 왜 이렇게 조용하지.',
+    '지금은 곤란해. 나중에 와.',
+    '(안쪽에서 의자 끄는 소리)'
+  ],
+  studyQuiet: [
+    '조용하다. 문 너머에 아무도 없는 것 같다.',
+    '문고리가 차갑다. 안은 어둡다.',
+    '잠겨 있다. 기척이 없다.'
+  ],
+  studyDoor: [
+    '잠겨 있다. 안에서 종이 넘기는 소리가 난다.',
+    '음악 소리가 문을 넘어 들린다.',
+    '식물들에게 소리를 지르는 것 같다.',
+    '문고리를 돌려도 꿈쩍하지 않는다.',
+    '「…들어오지 말라고 했을 텐데.」'
+  ],
+  labInner: [
+    '열리지 않는다. 문 밑으로 미지근한 김이 새어 나온다.',
+    '열쇠구멍으로 보글보글 소리가 난다.',
+    '문틈 사이로 푸르스름한 빛이 번졌다가 사라진다.'
+  ],
+  guests: [
+    {name:'코린트인', color:'#3b4a63', desc:'이름표는 없고 밖을 내다보는 구멍은 눈 모양이다. 어쩐지 가까이 가면 안 될 것 같다.'},
+    {name:'피터 파커', color:'#4b3b63', desc:'메모지가 붙어 있다. “자주 안 와도 치우지 마세요!”'},
+{name:'까만 크롤리', color:'#3b6358', desc:'“주인아 분유 타와라.”라고 메모지만 붙어 있다.'},
+    {name:'두 시의\n코린트인', color:'#63503b', desc:'문틈으로 불빛이 새어 나온다. 인기척은 느껴지지 않는다.'},
+{name:'루이', color:'#633b4a', desc:'어둡고 조용하지만 누군가 있는 듯하다'},
+{name:'윌&로비', color:'#3b5263', desc:'“손님방 아님.” 이라고 적혀 있다.'},
+{name:'레스트라드', color:'#4a633b', desc:'장기 거주자인 듯 유독 안락해 보인다.'},
+{name:'닥터', color:'#63603b', desc:'가끔 무언가 터지는 듯한 소리가 들려오면 거의 이 방이다.'},
+{name:'닥터', color:'#533b63', desc:'방 두 개를 붙여 쓰는 것 같다.'},
+{name:'닥터', color:'#3b5f63', desc:'빈 방 아님'},
+{name:'아기새\n피터 파커', color:'#63453b', desc:'문보다는 창문으로 자주 오가는 것 같다.'},
+{name:'월터', color:'#4f633b', desc:'합의 중'},
+{name:'룰라 메이', color:'#3b4663', desc:'문 밖으로 이따금 소품들이 걸려 있다.'},
+{name:'네이선 린드', color:'#633b59', desc:'서재 바로 옆 방이다.'},
+{name:'케인', color:'#3b635a', desc:'“빈 방 아님.”'},
+{name:'이니드', color:'#5a3b63', desc:'“빈 방 아님.”'},
+  ]
+};
+
+/* ===== 도구 ===== */
+var $ = function(s, el){ return (el || document).querySelector(s); };
+function h(tag, attrs){
+  var e = document.createElement(tag);
+  if (attrs) for (var k in attrs){
+    var v = attrs[k];
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k.slice(0,2) === 'on') e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  var kids = Array.prototype.slice.call(arguments, 2);
+  kids.forEach(function add(c){
+    if (c == null || c === false) return;
+    if (Array.isArray(c)) { c.forEach(add); return; }
+    e.append(typeof c === 'object' ? c : document.createTextNode(String(c)));
+  });
+  return e;
+}
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function pickN(a, n){
+  var c = a.slice(), out = [];
+  while (out.length < n && c.length) out.push(c.splice(Math.floor(Math.random()*c.length),1)[0]);
+  return out;
+}
+function lsGet(k, d){ try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } }
+function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+function fmt(ts){ try { return new Date(ts).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'}); } catch(e){ return ''; } }
+function obj(title){
+  var rest = Array.prototype.slice.call(arguments, 1);
+  return h('div',{class:'obj'}, h('h3',null,title), rest);
+}
+
+/* ===== 공유 저장소 (Firestore가 안 되면 내 브라우저에만 저장) ===== */
+var fs = null, canShare = false;
+var S = {
+  guestRemote: [], guestLocal: lsGet('crowley.guest', []),
+  board: [], boardLocal: lsGet('crowley.board', []),
+  fridge: null, door: null,
+  defaultSlots: pickN(CONTENT.foods, 6)
+};
+function tsMs(t){ return (t && t.toMillis) ? t.toMillis() : Date.now(); }
+function shareFailed(){ canShare = false; redrawAll(); }
+var widgets = {};
+function redraw(n){ if (widgets[n]) widgets[n](); }
+function redrawAll(){ Object.keys(widgets).forEach(redraw); }
+function sharedHint(){ return canShare ? '' : '여기 남긴 흔적은 지금 내 브라우저에만 보여요.'; }
+
+/* ===== 텔레비전 ===== */
+var tv = { state:'off', kind:'msg', msg:'', t:null, d:null, armed:false };
+function tvSync(){
+  redraw('tv');
+  $('[data-room="living"]').dataset.tv = tv.state;
+}
+function disarm(){ clearTimeout(tv.t); tv.armed = false; }
+function armScare(){
+  if (tv.state !== 'on' || tv.kind !== 'msg' || tv.armed) return;
+  tv.armed = true;
+  clearTimeout(tv.t);
+  tv.t = setTimeout(function(){
+    tv.armed = false;
+    tv.state = 'scare';
+    tvSync();
+    tv.t = setTimeout(function(){ tv.state = 'off'; tvSync(); }, 3500);
+  }, 9000);
+}
+function tvOff(){ disarm(); clearTimeout(tv.d); tv.state = 'off'; tvSync(); }
+function tvOn(){
+  if (document.hidden || tv.state !== 'off') return;
+  tv.state = 'on';
+  tv.kind = Math.random() < 0.55 ? 'msg' : 'drama';
+  tv.msg = pick(tv.kind === 'msg' ? CONTENT.tv : CONTENT.drama);
+  tvSync();
+  clearTimeout(tv.d);
+  if (tv.kind === 'drama'){
+    tv.d = setTimeout(function(){
+      if (tv.state === 'on' && tv.kind === 'drama'){ tv.state = 'off'; tvSync(); }
+    }, 45000);
+  } else if (openRoom === 'living') armScare();
+}
+
+function tvBox(){
+  var screen = h('div',{class:'tv off','aria-live':'polite'});
+  var off = h('button',{class:'btn',type:'button',onclick:tvOff},'끄기');
+  widgets.tv = function(){
+    screen.className = 'tv ' + tv.state + ' ' + tv.kind;
+    screen.replaceChildren(
+      tv.state === 'on' ? h('span',null,tv.msg) :
+      tv.state === 'scare' ? h('span',null,CONTENT.tvScare) :
+      h('span',null,'꺼져 있다.')
+    );
+    off.hidden = tv.state !== 'on';
+  };
+  widgets.tv();
+  return h('div',{class:'tvwrap'}, screen, off);
+}
+
+function phoneBox(){
+  var line = h('p',{class:'flavor','aria-live':'polite'},'수화기는 내려져 있다.');
+  var last = '';
+  return h('div',{class:'tvwrap'},
+    h('button',{class:'btn',type:'button',onclick:function(){
+      var next = pick(CONTENT.phone.filter(function(p){ return p !== last; }));
+      last = next; line.textContent = next;
+    }},'전화기 누르기'),
+    line
+  );
+}
+
+/* ===== 현관 ===== */
+function guestRows(){
+  var rows = S.guestRemote.map(function(r){ return { n:r.n, t:r.t, ts:r.ts }; });
+  S.guestLocal.forEach(function(e){ rows.push({ n:e.n, t:e.t, ts:e.ts, local:true }); });
+  rows.sort(function(a,b){ return b.ts - a.ts; });
+  return rows.slice(0, 15);
+}
+async function addGuest(n, t){
+  var name = (n || '이름 없는 손님').slice(0, 12);
+  if (canShare && fs){
+    try { await addDoc(collection(fs, 'guestbook'), { n: name, t: t.slice(0, 60), ts: serverTimestamp() }); return; }
+    catch(e){ shareFailed(); }
+  }
+  S.guestLocal = S.guestLocal.concat([{ n: name, t: t, ts: Date.now() }]).slice(-10);
+  lsSet('crowley.guest', S.guestLocal);
+}
+
+function guestbookBox(){
+  var list = h('ul',{class:'gb'});
+  var status = h('p',{class:'hint'});
+  var nameI = h('input',{id:'gb-name',type:'text',maxlength:'12',placeholder:'이름',autocomplete:'off','aria-label':'이름'});
+  var textI = h('input',{id:'gb-text',type:'text',maxlength:'60',placeholder:'한 줄 남기기',autocomplete:'off','aria-label':'방명록 한 줄'});
+  var form = h('form',{class:'row',onsubmit:async function(e){
+    e.preventDefault();
+    var t = textI.value.trim();
+    if (!t) return;
+    textI.value = '';
+    await addGuest(nameI.value.trim(), t);
+    redraw('guestbook');
+  }}, nameI, textI, h('button',{class:'btn',type:'submit'},'남기기'));
+  widgets.guestbook = function(){
+    status.textContent = sharedHint();
+    var rows = guestRows();
+    list.replaceChildren.apply(list, rows.length ? rows.map(function(r){
+      return h('li',null,
+        h('span',{class:'who'}, r.n), h('span',{class:'when'}, fmt(r.ts)),
+        h('p',{class:'msg'}, r.t)
+      );
+    }) : [h('li',null,h('p',{class:'empty'},'아직 아무도 이름을 남기지 않았다.'))]);
+  };
+  widgets.guestbook();
+  return h('div',{class:'tvwrap',style:'width:100%'}, form, status, list);
+}
+
+function curNotice(){
+  var t = (S.door && typeof S.door.text === 'string') ? S.door.text.trim() : '';
+  return t || CONTENT.notice;
+}
+function doorBox(){
+  var note = h('div',{class:'sticky','aria-live':'polite'});
+  widgets.door = function(){ note.textContent = curNotice(); };
+  widgets.door();
+  return h('div',{class:'tvwrap'}, note);
+}
+
+function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function shoesNow(){
+  var rnd = mulberry32(Math.floor(Date.now() / (30*60*1000)));
+  var pool = CONTENT.shoes.slice(), n = 2 + Math.floor(rnd()*3), out = [];
+  while (out.length < n && pool.length) out.push(pool.splice(Math.floor(rnd()*pool.length),1)[0]);
+  return out;
+}
+function mountEntry(body){
+  body.append(
+    obj('방명록', guestbookBox()),
+    obj('문 앞 메모', doorBox()),
+    obj('현관 신발', h('p',{class:'flavor'}, shoesNow().join(', ') + '.'))
+  );
+}
+
+/* ===== 거실 ===== */
+function mountLiving(body){
+  var items = pickN(CONTENT.tableItems, Math.floor(Math.random()*3));
+  body.append(
+    obj('왕좌 의자', h('p',{class:'flavor'}, CONTENT.throne)),
+    obj('텔레비전', tvBox()),
+    obj('책상 위 전화', phoneBox()),
+    obj('테이블', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.'))
+  );
+  armScare();
+}
+
+/* ===== 부엌 ===== */
+function boardRows(){
+  var rows = S.board.map(function(r){ return {t:r.t, ts:r.ts, id:r.id}; })
+    .concat(S.boardLocal.map(function(r){ return {t:r.t, ts:r.ts, local:true}; }));
+  rows.sort(function(a,b){ return b.ts - a.ts; });
+  return rows.slice(0, 12);
+}
+async function addBoard(t){
+  if (canShare && fs){
+    try { await addDoc(collection(fs, 'whiteboard'), { t: t.slice(0, 40), ts: serverTimestamp() }); return; }
+    catch(e){ shareFailed(); }
+  }
+  S.boardLocal = S.boardLocal.concat([{ t: t, ts: Date.now() }]).slice(-12);
+  lsSet('crowley.board', S.boardLocal);
+}
+function boardBox(){
+  var ul = h('ul');
+  var paper = h('div',{class:'whiteboard'}, ul);
+  var status = h('p',{class:'hint'});
+  var input = h('input',{id:'wb-text',type:'text',maxlength:'40',placeholder:'화이트보드에 한 줄',autocomplete:'off','aria-label':'화이트보드에 한 줄'});
+  var form = h('form',{class:'row',onsubmit:async function(e){
+    e.preventDefault();
+    var t = input.value.trim();
+    if (!t) return;
+    input.value = '';
+    await addBoard(t);
+    redraw('board');
+  }}, input, h('button',{class:'btn',type:'submit'},'쓰기'));
+  widgets.board = function(){
+    status.textContent = sharedHint();
+    var rows = boardRows();
+    ul.replaceChildren.apply(ul, rows.length ? rows.map(function(r){
+      return h('li',null,
+        h('span',{class:'t'}, r.t)
+      );
+    }) : [h('li',null,h('span',{class:'empty'},'깨끗하게 닦여 있다.'))]);
+  };
+  widgets.board();
+  return h('div',{class:'tvwrap',style:'width:100%'}, paper, form, status);
+}
+
+function slots(){
+  return (S.fridge && Array.isArray(S.fridge.slots) && S.fridge.slots.length) ? S.fridge.slots : S.defaultSlots;
+}
+async function saveFridge(next){
+  if (canShare && fs){
+    try { await setDoc(doc(fs, 'house', 'fridge'), { slots: next }); return; }
+    catch(e){ shareFailed(); }
+  }
+  S.fridge = { slots: next };
+}
+function fridgeBox(){
+  var grid = h('div',{class:'foods'});
+  var said = h('p',{class:'flavor','aria-live':'polite'},'냉장고 안이 가득 차 있다.');
+  var status = h('p',{class:'hint'});
+  var input = h('input',{id:'food-name',type:'text',maxlength:'12',placeholder:'넣을 음식 이름',autocomplete:'off','aria-label':'넣을 음식 이름'});
+  var form = h('form',{class:'row',onsubmit:async function(e){
+    e.preventDefault();
+    var name = input.value.trim();
+    if (!name) return;
+    input.value = '';
+    var cur = slots().slice();
+    var i = Math.floor(Math.random()*cur.length);
+    var old = cur[i];
+    cur[i] = name;
+    await saveFridge(cur);
+    said.textContent = name + ' 넣음. ' + old + '은(는) 안쪽으로 밀려났다.';
+    redraw('fridge');
+  }}, input, h('button',{class:'btn',type:'submit'},'넣기'));
+  async function take(i){
+    var cur = slots().slice();
+    var old = cur[i];
+    var fresh = CONTENT.foods.filter(function(f){ return cur.indexOf(f) < 0; });
+    var nf = pick(fresh.length ? fresh : CONTENT.foods);
+    cur[i] = nf;
+    await saveFridge(cur);
+    said.textContent = old + ' 꺼냄. 빈 자리에는 어느새 ' + nf + '.';
+    redraw('fridge');
+  }
+  widgets.fridge = function(){
+    status.textContent = sharedHint();
+    grid.replaceChildren.apply(grid, slots().map(function(f, i){
+      return h('button',{class:'btn food',type:'button',onclick:function(){ take(i); }}, f);
+    }));
+  };
+  widgets.fridge();
+  return h('div',{class:'tvwrap',style:'width:100%'}, grid, said, form, status);
+}
+
+function mountKitchen(body){
+  var items = pickN(CONTENT.tableItems, Math.floor(Math.random()*3));
+  body.append(
+    obj('냉장고 화이트보드', boardBox()),
+    obj('냉장고 안', fridgeBox()),
+    obj('식탁', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.'))
+  );
+}
+
+/* ===== 서재, 다용도실 ===== */
+var studyIn = false;
+function mountStudy(body){
+  var line = h('p',{class:'flavor','aria-live':'polite'}, studyIn ? CONTENT.studyDoor[0] : CONTENT.studyQuiet[0]);
+  body.append(obj('서재 문',
+    h('div',{class:'tvwrap'},
+      h('button',{class:'btn',type:'button',onclick:function(){
+        var pool = studyIn ? CONTENT.studyDoor : CONTENT.studyQuiet;
+        line.textContent = pool[Math.floor(Math.random()*pool.length)];
+      }},'문고리 잡기'),
+      line
+    )));
+}
+
+var lab = { clicks:0, open:false };
+function mountUtil(body){
+  var wrap = h('div',{class:'doors'});
+  var said = h('p',{class:'flavor','aria-live':'polite'});
+  function draw(refocus){
+    wrap.replaceChildren();
+    var gd = h('button',{class:'graydoor' + (lab.open ? ' open' : ''),type:'button','aria-label':'회색 문',onclick:function(){
+      if (lab.open) return;
+      lab.clicks++;
+      if (lab.clicks >= 5){ lab.open = true; draw(true); return; }
+      gd.classList.remove('shake'); void gd.offsetWidth; gd.classList.add('shake');
+    }});
+    wrap.append(gd);
+    if (lab.open){
+      wrap.append(h('button',{class:'odd',type:'button','aria-label':'잠긴 수상한 문',onclick:function(){ said.textContent = pick(CONTENT.labInner); }}));
+    }
+    if (refocus){ var f = lab.open ? wrap.querySelector('.odd') : gd; if (f) f.focus(); }
+  }
+  draw(false);
+  body.append(h('div',{class:'obj'}, wrap, said));
+}
+
+/* ===== 방 열고 닫기 ===== */
+var ROOMS = {
+  living:  { mount: mountLiving,  widgets:['tv'] },
+  entry:   { mount: mountEntry,   widgets:['guestbook','door'] },
+  kitchen: { mount: mountKitchen, widgets:['board','fridge'] },
+  study:   { mount: mountStudy,   widgets:[] },
+  util:    { mount: mountUtil,    widgets:[] }
+};
+var openRoom = null;
+function closeRoom(id){
+  var el = $('[data-room="' + id + '"]');
+  el.dataset.open = 'false';
+  $('.room-head', el).setAttribute('aria-expanded','false');
+  var body = $('.room-body', el);
+  body.hidden = true; body.replaceChildren();
+  ROOMS[id].widgets.forEach(function(w){ delete widgets[w]; });
+  if (id === 'living' && tv.state === 'on') disarm();
+}
+function toggleRoom(id){
+  var same = openRoom === id;
+  if (openRoom) closeRoom(openRoom);
+  openRoom = same ? null : id;
+  if (!openRoom) return;
+  var el = $('[data-room="' + id + '"]');
+  el.dataset.open = 'true';
+  $('.room-head', el).setAttribute('aria-expanded','true');
+  var body = $('.room-body', el);
+  body.hidden = false;
+  ROOMS[id].mount(body);
+}
+document.querySelectorAll('.room').forEach(function(el){
+  $('.room-head', el).addEventListener('click', function(){ toggleRoom(el.dataset.room); });
+});
+
+/* ===== 객식구 복도 ===== */
+(function(){
+  var hall = $('#hall'), desc = $('#guestdesc');
+  var doors = CONTENT.guests.map(function(g){
+    var b = h('button',{class:'door',type:'button','aria-pressed':'false','aria-label':g.name.replace(/\n/g,' ') + ' 방 문',style:'--dc:' + g.color},
+      h('span',{class:'plate'}, g.name));
+    b.addEventListener('click', function(){
+      doors.forEach(function(d){ d.setAttribute('aria-pressed','false'); });
+      b.setAttribute('aria-pressed','true');
+      desc.textContent = g.desc;
+    });
+    return b;
+  });
+  hall.append.apply(hall, doors);
+})();
+
+/* ===== 가끔 일어나는 일 ===== */
+function loop(fn, min, max){
+  function go(){ setTimeout(function(){ fn(); go(); }, (min + Math.random()*(max - min))*1000); }
+  go();
+}
+var leakEl = $('#leak'), leakT = null;
+function showLeak(){
+  leakEl.textContent = pick(CONTENT.study);
+  leakEl.classList.add('show');
+  clearTimeout(leakT);
+  leakT = setTimeout(function(){ leakEl.classList.remove('show'); }, 7000);
+}
+/* 서재는 대체로 비어 있고, 가끔 크롤리가 들어와 있는 동안만 기척이 난다 */
+loop(function(){
+  if (document.hidden || studyIn) return;
+  var hint = $('.rh', $('[data-room="study"]'));
+  studyIn = true;
+  hint.textContent = '인기척이 있음';
+  showLeak();
+  setTimeout(function(){ if (studyIn && !document.hidden) showLeak(); }, 14000);
+  setTimeout(function(){ studyIn = false; hint.textContent = '잠겨 있음'; }, 30000);
+}, 60, 150);
+loop(tvOn, 45, 130);
+
+/* ===== 공유 저장소 연결 ===== */
+try {
+  fs = getFirestore(initializeApp(firebaseConfig));
+  canShare = true;
+  onSnapshot(query(collection(fs, 'guestbook'), orderBy('ts', 'desc'), limit(15)), function(snap){
+    S.guestRemote = snap.docs.map(function(d){ var x = d.data({ serverTimestamps: 'estimate' }); return { n: x.n, t: x.t, ts: tsMs(x.ts) }; });
+    redraw('guestbook');
+  }, shareFailed);
+  onSnapshot(query(collection(fs, 'whiteboard'), orderBy('ts', 'desc'), limit(12)), function(snap){
+    S.board = snap.docs.map(function(d){ var x = d.data({ serverTimestamps: 'estimate' }); return { id: d.id, t: x.t, ts: tsMs(x.ts) }; });
+    redraw('board');
+  }, shareFailed);
+  onSnapshot(doc(fs, 'house', 'fridge'), function(snap){ S.fridge = snap.exists() ? snap.data() : null; redraw('fridge'); }, shareFailed);
+  onSnapshot(doc(fs, 'house', 'doorNote'), function(snap){ S.door = snap.exists() ? snap.data() : null; redraw('door'); }, shareFailed);
+} catch(e){ canShare = false; }
+})();
+</script>
+
+</html>
