@@ -246,6 +246,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .dsign[data-s="휴식 중"]{border-color:#5f8fb8; color:#a9cdee}
 .dsign[data-s="노크 금지"]{border-color:#b85c5c; color:#f0a8a8}
 .dsign[data-s="출입허용"]{border-color:#5fa070; color:#a8e0b6}
+.dsign[data-s="출입금지"]{border-color:#d04a4a; color:#ffb3b3; background:#2a1416; font-weight:700}
 .signbtn[aria-pressed="true"]{border-color:var(--teal); color:var(--teal)}
 .plate{white-space:pre-line; background:rgba(0,0,0,.45); font-size:12px; padding:2px 8px; border-radius:2px; overflow-wrap:anywhere}
 .glock{margin:6px 0 0; display:grid; gap:6px}
@@ -316,7 +317,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-2)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-3)</p>
 </main>
 
 <script type="module">
@@ -1642,7 +1643,7 @@ notesMount();
   }
   var PALETTE = ['#3b4a63','#4b3b63','#3b6358','#63503b','#633b4a','#3b5263','#4a633b','#63603b','#533b63','#3b5f63','#63453b','#4f633b','#3b4663','#633b59','#3b635a','#5a3b63','#5b4a3f','#2f2f36','#6b2a37','#2a5a6b',
     '#7a6a2a','#7a4026','#8f2a2a','#8a5568','#6a5f8a','#5f7a8a','#6a7a5f','#24442f','#243050','#2a6b64','#4a4f57','#8a8577'];
-  var SIGNS = ['부재중', '휴식 중', '노크 금지', '출입허용'];
+  var SIGNS = ['부재중', '휴식 중', '노크 금지', '출입허용', '출입금지'];
   var pickColor = '', pickSign = '';
   var signEls = [''].concat(SIGNS).map(function(t){
     var b = h('button',{class:'btn signbtn',type:'button','aria-pressed':'false',onclick:function(){ pickSign = t; paintSigns(); }}, t || '팻말 떼기');
@@ -1851,7 +1852,7 @@ try {
   onSnapshot(doc(fs, 'house', 'marker'), markerOnState, featureOff('marker'));
   onSnapshot(collection(fs, 'guestRooms'), function(snap){
     var map = {};
-    snap.docs.forEach(function(d){ var x = d.data(); map[d.id] = { st: x.st, pin: x.pin || '', desc: x.desc || '', name: x.name || '', color: /^#[0-9a-f]{6}$/i.test(x.color || '') ? x.color : '', sign: ['부재중', '휴식 중', '노크 금지', '출입허용'].indexOf(x.sign) >= 0 ? x.sign : '' }; });
+    snap.docs.forEach(function(d){ var x = d.data(); map[d.id] = { st: x.st, pin: x.pin || '', desc: x.desc || '', name: x.name || '', color: /^#[0-9a-f]{6}$/i.test(x.color || '') ? x.color : '', sign: ['부재중', '휴식 중', '노크 금지', '출입허용', '출입금지'].indexOf(x.sign) >= 0 ? x.sign : '' }; });
     S.rooms = map;
     redraw('rooms');
   }, featureOff('rooms'));
