@@ -203,7 +203,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .slot .btn{min-height:30px; padding:3px 10px; font-size:13px}
 .wash{position:relative; overflow:hidden}
 .wash .fill{position:absolute; left:0; top:0; bottom:0; width:0; background:rgba(95,208,192,.38)}
-.wash.go .fill{width:100%; transition:width 3s linear}
+.wash.go .fill{width:100%; transition:width 1s linear}
 .wash .lbl2{position:relative}
 .mood{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
 .mood .face{font-size:34px; line-height:1}
@@ -238,6 +238,14 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 }
 .door:hover{border-color:var(--teal)}
 .door[aria-pressed="true"]{border-color:var(--teal); box-shadow:inset 0 0 0 5px rgba(0,0,0,.22), 0 0 0 2px var(--teal)}
+.door{position:relative}
+.dsign{position:absolute; top:26px; left:50%; transform:translateX(-50%); white-space:nowrap; font-size:11px; line-height:1.3; padding:2px 7px; border-radius:2px; background:#1c1d22; border:1px solid #6b7078; color:#d6d8dc; box-shadow:0 1px 0 rgba(0,0,0,.5)}
+.dsign::before{content:''; position:absolute; left:50%; top:-9px; width:1px; height:8px; background:#8a8d94}
+.dsign[data-s="부재중"]{border-color:#7b8089; color:#c3c6cc}
+.dsign[data-s="휴식 중"]{border-color:#5f8fb8; color:#a9cdee}
+.dsign[data-s="노크 금지"]{border-color:#b85c5c; color:#f0a8a8}
+.dsign[data-s="출입허용"]{border-color:#5fa070; color:#a8e0b6}
+.signbtn[aria-pressed="true"]{border-color:var(--teal); color:var(--teal)}
 .plate{white-space:pre-line; background:rgba(0,0,0,.45); font-size:12px; padding:2px 8px; border-radius:2px; overflow-wrap:anywhere}
 .glock{margin:6px 0 0; display:grid; gap:6px}
 .glock .gpanel input[type=text]{max-width:300px}
@@ -307,7 +315,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 6-1)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-1)</p>
 </main>
 
 <script type="module">
@@ -1235,7 +1243,7 @@ document.querySelectorAll('.room').forEach(function(el){
 
 /* ===== 소파 휴식, 찬장과 싱크대, 기분 다이얼, 노크, 냉장고 기록 ===== */
 S.sofa = null; S.pantry = null; S.mood = null; S.knock = null; S.fridgeStats = null;
-var SOFA_MS = 15*60*1000, PANTRY_N = 8, SINK_MAX = 6;
+var SOFA_EGG = ['빌리', '빌리 루소', '케인', 'caine'], PANTRY_N = 8, SINK_MAX = 6;
 function dayKST(ms){
   try { return new Date(ms).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }); }
   catch(e){ return new Date(ms).toISOString().slice(0, 10); }
@@ -1246,11 +1254,11 @@ function bump(docName, field){
   setDoc(doc(fs, 'house', docName), patch, { merge: true }).catch(function(){ S.off[docName] = true; redrawAll(); });
 }
 
-/* 소파: 15분 동안 한 사람만 쉴 수 있다. 잠금은 규칙이 서버 시간으로 확인한다 */
+/* 소파: 15분(숨겨진 이름이면 30분) 동안 한 사람만 쉴 수 있다. 잠금은 규칙이 서버 시간으로 확인한다 */
 function sofaState(){
   var d = S.sofa;
   if (!d || typeof d.start !== 'number') return null;
-  var left = d.start + SOFA_MS - Date.now();
+  var left = d.start + (d.mins === 30 ? 30 : 15)*60000 - Date.now();
   if (d.rel || left <= 0) return null;
   return { who: d.who, uid: d.uid, left: left, blanket: !!d.blanket };
 }
@@ -1261,13 +1269,14 @@ function sofaBox(){
   var restBtn = h('button',{class:'btn',type:'submit'},'휴식');
   var form = h('form',{class:'row',onsubmit:async function(e){
     e.preventDefault();
-    var who = nameI.value.trim();
+    var who = nameI.value.trim().replace(/\s+/g, ' ');
     if (!who) { status.textContent = '이름을 적어 주세요.'; return; }
     if (sofaState()) return;
+    var mins = SOFA_EGG.indexOf(who.toLowerCase()) >= 0 ? 30 : 15;
     if (!(canShare && fs && !S.off.sofa && N.authOk && myUid())){ status.textContent = '지금은 쉴 수 없어요.'; return; }
     status.textContent = '';
     try {
-      await setDoc(doc(fs, 'house', 'sofa'), { who: who.slice(0, 12), uid: myUid(), start: serverTimestamp(), rel: false, blanket: false });
+      await setDoc(doc(fs, 'house', 'sofa'), { who: who.slice(0, 12), uid: myUid(), start: serverTimestamp(), rel: false, blanket: false, mins: mins });
       nameI.value = '';
     } catch(err){ said.textContent = CONTENT.sofa.busy; }
   }}, nameI, restBtn);
@@ -1346,7 +1355,7 @@ function pantryUI(){
       said.textContent = C.washing;
       void washFill.offsetWidth;
       washBtn.classList.add('go');
-      await new Promise(function(r){ setTimeout(r, 3000); });
+      await new Promise(function(r){ setTimeout(r, 1000); });
     }
     washBtn.classList.remove('go');
     washing = false;
@@ -1598,18 +1607,25 @@ notesMount();
   function roomsOk(){ return !!(canShare && fs && !S.off.rooms && window.crypto && crypto.subtle); }
   async function writeRoom(id, data){
     try {
-      await setDoc(doc(fs, 'guestRooms', id), { st: data.st, pin: data.pin, desc: data.desc, name: data.name || '', color: data.color || '', ts: serverTimestamp() });
+      await setDoc(doc(fs, 'guestRooms', id), { st: data.st, pin: data.pin, desc: data.desc, name: data.name || '', color: data.color || '', sign: data.sign || '', ts: serverTimestamp() });
       return true;
     } catch(e){ gl.msg = '지금은 할 수 없어요.'; return false; }
   }
 
   function keep(rec, over){
-    var o = { st: 'set', pin: (rec && rec.pin) || '', desc: (rec && rec.desc) || '', name: (rec && rec.name) || '', color: (rec && rec.color) || '' };
+    var o = { st: 'set', pin: (rec && rec.pin) || '', desc: (rec && rec.desc) || '', name: (rec && rec.name) || '', color: (rec && rec.color) || '', sign: (rec && rec.sign) || '' };
     for (var k in over) o[k] = over[k];
     return o;
   }
-  var PALETTE = ['#3b4a63','#4b3b63','#3b6358','#63503b','#633b4a','#3b5263','#4a633b','#63603b','#533b63','#3b5f63','#63453b','#4f633b','#3b4663','#633b59','#3b635a','#5a3b63','#5b4a3f','#2f2f36','#6b2a37','#2a5a6b'];
-  var pickColor = '';
+  var PALETTE = ['#3b4a63','#4b3b63','#3b6358','#63503b','#633b4a','#3b5263','#4a633b','#63603b','#533b63','#3b5f63','#63453b','#4f633b','#3b4663','#633b59','#3b635a','#5a3b63','#5b4a3f','#2f2f36','#6b2a37','#2a5a6b',
+    '#7a6a2a','#7a4026','#8f2a2a','#8a5568','#6a5f8a','#5f7a8a','#6a7a5f','#24442f','#243050','#2a6b64','#4a4f57','#8a8577'];
+  var SIGNS = ['부재중', '휴식 중', '노크 금지', '출입허용'];
+  var pickColor = '', pickSign = '';
+  var signEls = [''].concat(SIGNS).map(function(t){
+    var b = h('button',{class:'btn signbtn',type:'button','aria-pressed':'false',onclick:function(){ pickSign = t; paintSigns(); }}, t || '팻말 떼기');
+    b.dataset.s = t; return b;
+  });
+  function paintSigns(){ signEls.forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.s === pickSign ? 'true' : 'false'); }); }
   var swatchEls = PALETTE.map(function(c){
     var b = h('button',{class:'swatch',type:'button',style:'background:' + c,'aria-label':'문 색 ' + c,'aria-pressed':'false',onclick:function(){ pickColor = c; paintSwatches(); }});
     b.dataset.c = c; return b;
@@ -1622,7 +1638,7 @@ notesMount();
   var descI = h('input',{type:'text',maxlength:'60',autocomplete:'off',placeholder:'방 설명 (비우면 원래 설명)','aria-label':'방 설명'});
   var saveBtn = h('button',{class:'btn',type:'button',onclick:async function(){
     var rec = roomRec(cur.id); if (!rec || rec.st !== 'set') return;
-    var ok = await writeRoom(cur.id, keep(rec, { desc: descI.value.trim().slice(0, 60), name: nameI.value.trim().slice(0, 16), color: pickColor }));
+    var ok = await writeRoom(cur.id, keep(rec, { desc: descI.value.trim().slice(0, 60), name: nameI.value.trim().slice(0, 16), color: pickColor, sign: pickSign }));
     if (ok) gl.msg = '저장했어요.';
     render();
   }},'저장');
@@ -1635,7 +1651,7 @@ notesMount();
     if (ok){ gl.msg = '번호를 바꿨어요.'; newPinI.value = ''; }
     render();
   }},'번호 바꾸기');
-  var editBox = h('div',{class:'tvwrap'}, h('div',{class:'row'}, descI), h('div',{class:'row'}, nameI), h('div',{class:'swatches'}, swatchEls), h('div',{class:'row'}, saveBtn), h('div',{class:'row'}, newPinI, changeBtn));
+  var editBox = h('div',{class:'tvwrap'}, h('div',{class:'row'}, descI), h('div',{class:'row'}, nameI), h('div',{class:'swatches'}, swatchEls), h('div',{class:'swatches'}, signEls), h('div',{class:'row'}, saveBtn), h('div',{class:'row'}, newPinI, changeBtn));
   var msgP = h('p',{class:'gstate','aria-live':'polite'});
   var closeBtn = h('button',{class:'btn',type:'button',onclick:function(){ resetLock(); render(); }},'닫기');
   var panel = h('div',{class:'gpanel'}, pinForm, editBox, msgP, closeBtn);
@@ -1708,7 +1724,9 @@ notesMount();
       var nm = (rec && rec.name) ? rec.name.replace(/\//g, '\n') : m.g.name;
       if (m.plate.textContent !== nm) m.plate.textContent = nm;
       m.btn.style.setProperty('--dc', (rec && rec.color) ? rec.color : m.g.color);
-      m.btn.setAttribute('aria-label', nm.replace(/\n/g, ' ') + ' 방 문');
+      var sg = (rec && rec.sign) || '';
+      m.sign.hidden = !sg; m.sign.textContent = sg; m.sign.dataset.s = sg;
+      m.btn.setAttribute('aria-label', nm.replace(/\n/g, ' ') + ' 방 문' + (sg ? ', 팻말: ' + sg : ''));
     });
   }
   function render(){
@@ -1723,7 +1741,7 @@ notesMount();
     var editing = gl.unlocked && st === 'set';
     pinForm.hidden = editing;
     editBox.hidden = !editing;
-    if (editing && descI.dataset.room !== cur.id){ descI.value = (rec && rec.desc) || ''; nameI.value = (rec && rec.name) || ''; pickColor = (rec && rec.color) || cur.g.color; paintSwatches(); descI.dataset.room = cur.id; }
+    if (editing && descI.dataset.room !== cur.id){ descI.value = (rec && rec.desc) || ''; nameI.value = (rec && rec.name) || ''; pickColor = (rec && rec.color) || cur.g.color; paintSwatches(); pickSign = (rec && rec.sign) || ''; paintSigns(); descI.dataset.room = cur.id; }
     if (!editing) descI.dataset.room = '';
     msgP.textContent = gl.msg;
   }
@@ -1732,8 +1750,9 @@ notesMount();
   var doors = CONTENT.guests.map(function(g, i){
     var id = g.id || 'g' + (i + 1);
     var plate = h('span',{class:'plate'}, g.name);
-    var b = h('button',{class:'door',type:'button','aria-pressed':'false','aria-label':g.name.replace(/\n/g,' ') + ' 방 문',style:'--dc:' + g.color}, plate);
-    doorMeta[id] = { btn: b, plate: plate, g: g };
+    var sign = h('span',{class:'dsign',hidden:true});
+    var b = h('button',{class:'door',type:'button','aria-pressed':'false','aria-label':g.name.replace(/\n/g,' ') + ' 방 문',style:'--dc:' + g.color}, sign, plate);
+    doorMeta[id] = { btn: b, plate: plate, sign: sign, g: g };
     b.addEventListener('click', function(){
       doors.forEach(function(d){ d.setAttribute('aria-pressed','false'); });
       b.setAttribute('aria-pressed','true');
@@ -1809,14 +1828,14 @@ try {
   onSnapshot(doc(fs, 'house', 'marker'), markerOnState, featureOff('marker'));
   onSnapshot(collection(fs, 'guestRooms'), function(snap){
     var map = {};
-    snap.docs.forEach(function(d){ var x = d.data(); map[d.id] = { st: x.st, pin: x.pin || '', desc: x.desc || '', name: x.name || '', color: /^#[0-9a-f]{6}$/i.test(x.color || '') ? x.color : '' }; });
+    snap.docs.forEach(function(d){ var x = d.data(); map[d.id] = { st: x.st, pin: x.pin || '', desc: x.desc || '', name: x.name || '', color: /^#[0-9a-f]{6}$/i.test(x.color || '') ? x.color : '', sign: ['부재중', '휴식 중', '노크 금지', '출입허용'].indexOf(x.sign) >= 0 ? x.sign : '' }; });
     S.rooms = map;
     redraw('rooms');
   }, featureOff('rooms'));
   onSnapshot(doc(fs, 'house', 'sofa'), function(snap){
     if (!snap.exists()){ S.sofa = null; } else {
       var x = snap.data({ serverTimestamps: 'estimate' });
-      S.sofa = { who: x.who, uid: x.uid, start: tsMs(x.start), rel: !!x.rel, blanket: !!x.blanket };
+      S.sofa = { who: x.who, uid: x.uid, start: tsMs(x.start), rel: !!x.rel, blanket: !!x.blanket, mins: x.mins === 30 ? 30 : 15 };
     }
     redraw('sofa');
   }, featureOff('sofa'));
