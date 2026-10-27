@@ -34,7 +34,7 @@ body{
   padding-left:max(16px, env(safe-area-inset-left, 0px));
   padding-right:max(16px, env(safe-area-inset-right, 0px));
 }
-.wrap{max-width:980px; margin:0 auto}
+.wrap{max-width:1180px; margin:0 auto}
 h1{font-family:var(--f-disp); font-weight:700; font-size:30px; margin:0 0 4px; letter-spacing:.02em; text-wrap:balance}
 .lede{margin:0 0 22px; color:var(--muted); max-width:60ch}
 button{font:inherit; color:inherit}
@@ -42,14 +42,14 @@ button{font:inherit; color:inherit}
 
 .plan{
   display:grid; gap:10px; grid-template-columns:repeat(3,minmax(0,1fr));
-  grid-template-areas:"front entry entry" "study living kitchen" "util back ."; align-items:start;
+  grid-template-areas:"front entry entry" "study living kitchen" "util back ."; align-items:stretch;
 }
 @media (max-width:760px){
   .plan{grid-template-columns:minmax(0,1fr); grid-template-areas:"front" "entry" "living" "kitchen" "study" "util" "back"}
 }
 .room{
   position:relative; background:var(--room); border:1px solid var(--line); border-left:3px solid #6b2a37; border-radius:3px;
-  min-width:0;
+  min-width:0; display:flex; flex-direction:column;
 }
 .room[data-open="true"]{border-color:#3b6a76; border-left-color:var(--crimson)}
 .room-head{
@@ -69,7 +69,7 @@ button{font:inherit; color:inherit}
   margin:0 14px 12px; display:inline-block; border:1px solid var(--crimson); color:var(--crimson);
   font-size:12px; letter-spacing:.12em; padding:2px 8px;
 }
-.room-body{padding:0 0 6px}
+.room-body{padding:0 0 6px; flex:1}
 .obj{border-top:1px dashed var(--line); padding:12px 14px; display:grid; gap:8px; min-width:0}
 .obj h3{margin:0; font-size:12px; font-weight:500; letter-spacing:.1em; color:var(--muted)}
 .flavor{margin:0}
@@ -117,7 +117,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .notice .ntext{margin:0; font-family:var(--f-disp); font-size:17px; line-height:1.6; white-space:pre-line; overflow-wrap:anywhere}
 .chips{display:flex; flex-wrap:wrap; gap:6px}
 .chip[aria-pressed="true"]{border-color:var(--teal); color:var(--teal)}
-.whiteboard{background:var(--board); color:var(--board-ink); font-family:var(--f-hand); font-size:24px; line-height:1.4; padding:16px 20px; border:4px solid #9aa6b2; min-height:260px}
+.whiteboard{background:var(--board); color:var(--board-ink); font-family:var(--f-hand); font-size:24px; line-height:1.4; padding:16px 20px; border:4px solid #9aa6b2; min-height:170px; width:100%; box-sizing:border-box}
 .whiteboard ul{list-style:none; margin:0; padding:0; display:grid; gap:4px}
 .whiteboard li{display:flex; justify-content:space-between; gap:8px; align-items:baseline; border-bottom:1px dashed #c3ccd5}
 .whiteboard .t{min-width:0; overflow-wrap:anywhere}
@@ -130,11 +130,11 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .gb .msg{margin:0; overflow-wrap:anywhere}
 .gb .del{margin-top:2px; font-size:12px; min-height:0; padding:1px 8px; color:var(--crimson); border-color:#5a2a34}
 .foods{display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:6px}
-.food{text-align:center; padding:8px 6px; background:var(--room-deep); overflow-wrap:anywhere}
+.food{text-align:center; padding:6px 6px; background:var(--room-deep); overflow-wrap:anywhere}
 .fridge2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; width:100%}
-.fcol{display:grid; gap:6px; align-content:start; min-width:0}
+.fcol{display:grid; gap:4px; align-content:start; min-width:0}
 .fcap{font-size:12px; letter-spacing:.08em; color:var(--muted)}
-.food.vacant{display:grid; place-items:center; min-height:40px; border:1px dashed var(--line); border-radius:3px; color:var(--muted); font-size:13px}
+.food.vacant{display:grid; place-items:center; min-height:34px; border:1px dashed var(--line); border-radius:3px; color:var(--muted); font-size:13px}
 .mgrid{display:grid; grid-template-columns:repeat(5,minmax(0,46px)); gap:5px}
 .mcell{aspect-ratio:1; min-height:0; padding:0; font-variant-numeric:tabular-nums}
 .mcell.none{color:var(--muted)}
