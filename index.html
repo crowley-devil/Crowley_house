@@ -280,6 +280,25 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 }
 .candytotal{margin:0; font-family:var(--f-disp); color:#f3c98b}
 
+/* 할로윈 스킨: body.hw 일 때만 적용된다 (CONTENT.candy.endAt 이후에는 자동으로 빠진다). 배치와 크기는 건드리지 않고 색과 장식만 바꾼다 */
+body.hw{
+  --bg:#130d1a; --room:#1b1324; --room-deep:#150e1d; --line:#3a2a4d;
+  --ink:#f1e6d6; --muted:#9a8fa8; --crimson:#e8892b; --teal:#b794e0;
+}
+.hw .room{border-color:#3a2a4d; border-left-color:#c8651b}
+.hw .room[data-open="true"]{border-color:#6d4a8a; border-left-color:var(--crimson)}
+.hw .room::after{
+  content:""; position:absolute; top:0; right:0; width:44px; height:38px; pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='38' viewBox='0 0 56 48'%3E%3Cpath d='M56 0L2 0M56 0L14 30M56 0L56 46M56 0L32 40' stroke='%236b5a86' fill='none'/%3E%3Cpath d='M40 0Q38 12 56 18M24 0Q24 24 56 32' stroke='%236b5a86' fill='none'/%3E%3C/svg%3E") no-repeat right top;
+}
+.hw .room-head .rh{margin-right:30px}
+.hw .room:not([data-room="front"]) .room-head .rh::before{
+  content:""; display:inline-block; width:30px; height:16px; margin-right:8px; vertical-align:-3px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='16' viewBox='0 0 30 16'%3E%3Cpath d='M1 5Q5 -1 9 5Q11 2 13 5L15 9L17 5Q19 2 21 5Q25 -1 29 5Q25 6 23 11Q21 8 19 8L15 14L11 8Q9 8 7 11Q5 6 1 5Z' fill='%238a6fc0'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+.hw .btn:hover{border-color:#e8892b}
+.hw h1 .hwpump{display:inline-block; width:26px; height:26px; margin-right:8px; vertical-align:-3px}
+
 @keyframes roll{to{background-position:0 3px}}
 @keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(-3px,2px)}50%{transform:translate(3px,-2px)}75%{transform:translate(-2px,-2px)}100%{transform:translate(0,0)}}
 @keyframes pulse{50%{opacity:.25}}
@@ -336,7 +355,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-15)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-17)</p>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
@@ -571,10 +590,10 @@ var CONTENT = {
     steps: [50, 150, 300, 450, 600],
     decor: [
       '앞마당 한쪽에 빈 나무 바구니가 놓여 있다. 아직 아무 장식도 없다.',
-      '현관 계단에 작은 호박등 하나가 올라와 있다. 안에서 촛불이 깜빡인다.',
-      '울타리를 따라 호박등이 줄지어 있다. 나뭇가지에는 솜으로 만든 거미줄이 걸려 있다.',
-      '해적선 돛대에 박쥐 모양 종이 장식이 매달려 있다. 벤틀리 보닛에는 누가 작은 마녀 모자를 올려 두었다.',
-      '앞마당 전체에 주황빛 전구가 둘러져 있다. 벤틀리 헤드라이트에는 호박 얼굴이 붙어 있다. 누가 붙였는지는 알 것 같다.',
+      '현관 계단에 호박등이 줄지어 늘어져 있다.',
+      '전구가 울타리에 걸리고, 나무에는 솜 거미줄과 박쥐가 매달려 있다.',
+      '해적선 돛대부터 배 끝까지 박쥐 장식과 전구가 걸려 있다. 벤틀리 보닛에도 작은 마녀 모자가 놓여 있다.',
+      '앞마당에 가짜 묘지와 좀비 손, 커다란 잭오랜턴들이 놓인다.',
       '현관 위에 “트릭 오어 트릿”이라고 휘갈겨 쓴 현수막이 걸렸다. 사탕이 바구니 밖까지 넘치고, 어디선가 크롤리가 못마땅한 얼굴로 사탕을 세고 있는 것 같다.'
     ],
     stageUp: '바구니가 묵직해지더니 앞마당 분위기가 달라졌다.',
@@ -2201,6 +2220,18 @@ function studyTick(){
 studyTick();
 setInterval(studyTick, 5000);
 loop(tvOn, 45, 130);
+
+/* ===== 할로윈 스킨: 이벤트 기간(CONTENT.candy.endAt 전)에만 켜진다 ===== */
+var PUMPKIN_SVG = '<svg class="hwpump" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="14" rx="10" ry="7.5" fill="#e8892b"/><path d="M12 7Q12 4 15 3" stroke="#7aa045" stroke-width="2" fill="none"/><path d="M7 12L9 15L11 12Z M13 12L15 15L17 12Z" fill="#2a1408"/><path d="M8 17.5Q12 20 16 17.5" stroke="#2a1408" stroke-width="1.5" fill="none"/></svg>';
+function applySkin(){
+  var on = candyShown(), title = $('h1');
+  document.body.classList.toggle('hw', on);
+  var had = title && $('.hwpump', title);
+  if (on && title && !had) title.insertAdjacentHTML('afterbegin', PUMPKIN_SVG);
+  if (!on && had) had.remove();
+}
+applySkin();
+setInterval(applySkin, 60000);
 
 /* ===== 공유 저장소 연결 ===== */
 try {
