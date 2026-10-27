@@ -160,6 +160,11 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .fridge2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; width:100%}
 .fcol{display:grid; gap:4px; align-content:start; min-width:0}
 .fcap{font-size:12px; letter-spacing:.08em; color:var(--muted)}
+.vase{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; width:100%}
+.vslot{text-align:center; font-size:12px; padding:6px 2px; min-height:58px; border:1px solid var(--line); border-radius:3px; background:var(--room-deep); overflow-wrap:anywhere}
+.vslot .ic{display:block; font-size:22px; line-height:1.25}
+.vslot.vacant{display:grid; place-items:center; border-style:dashed; color:var(--muted)}
+.pocket{display:flex; flex-wrap:wrap; gap:6px}
 .food.vacant{display:grid; place-items:center; min-height:34px; border:1px dashed var(--line); border-radius:3px; color:var(--muted); font-size:13px}
 .mgrid{display:grid; grid-template-columns:repeat(5,minmax(0,46px)); gap:5px}
 .mcell{aspect-ratio:1; min-height:0; padding:0; font-variant-numeric:tabular-nums}
@@ -246,6 +251,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .dsign[data-s="휴식 중"]{border-color:#5f8fb8; color:#a9cdee}
 .dsign[data-s="노크 금지"]{border-color:#b85c5c; color:#f0a8a8}
 .dsign[data-s="출입허용"]{border-color:#5fa070; color:#a8e0b6}
+.dsign[data-s="순찰중"]{border-color:#c9a23a; color:#f0d58a}
 .dsign[data-s="출입금지"]{border-color:#d04a4a; color:#ffb3b3; background:#2a1416; font-weight:700}
 .signbtn[aria-pressed="true"]{border-color:var(--teal); color:var(--teal)}
 .plate{white-space:pre-line; background:rgba(0,0,0,.45); font-size:12px; padding:2px 8px; border-radius:2px; overflow-wrap:anywhere}
@@ -317,7 +323,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-3)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-5)</p>
 </main>
 
 <script type="module">
@@ -421,6 +427,33 @@ var CONTENT = {
     busy: '방금 다른 누군가가 먼저 앉았다.',
     blanket: '담요가 덮여 있다.',
     cover: '살그머니 담요를 덮어 주었다.'
+  },
+  garden: {
+    idle: '풀밭이 바람에 천천히 흔들린다.',
+    walking: '뒷마당을 천천히 걷는 중…',
+    none: ['잡초만 바스락거렸다. 오늘은 빈손이다.', '꽃은 없고 바람만 지나갔다.', '블랙 타지마할 근처에서 한참 서성였지만 아무것도 없었다.'],
+    got: ' 한 송이를 주웠다.',
+    full: '주머니가 가득 차서 더 담을 수 없다.',
+    pocketMax: 10,
+    cooldownMin: 30,
+    resting: '아직 다리가 쉬는 중이다.',
+    noneChance: 0.18,
+    flowers: [
+      { id: 'dandelion', name: '민들레', icon: '🌼', w: 25 },
+      { id: 'tulip', name: '튤립', icon: '🌷', w: 18 },
+      { id: 'cosmos', name: '코스모스', icon: '🌸', w: 18 },
+      { id: 'sunflower', name: '해바라기', icon: '🌻', w: 14 },
+      { id: 'lavender', name: '라벤더', icon: '🪻', w: 12 },
+      { id: 'rose', name: '붉은 장미', icon: '🌹', w: 8 },
+      { id: 'blackrose', name: '검은 장미', icon: '🥀', w: 5 }
+    ]
+  },
+  vase: {
+    hours: 8,
+    empty: '꽃병이 비어 있다.',
+    by: '님이 꽂음.',
+    pushed: ' 가장 오래된 꽃이 빠졌다.',
+    pocketEmpty: '주머니가 비어 있다. 뒷마당을 산책해 보세요.'
   },
   pantry: {
     coffee: { coffee: '커피', cocoa: '코코아' },
@@ -832,7 +865,8 @@ function mountLiving(body){
     obj('책상 위 전화', phoneBox()),
     obj('테이블', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.'), tarotBox()),
     obj('마커판', markerBox()),
-    obj('소파', sofaBox())
+    obj('소파', sofaBox()),
+    obj('꽃병', vaseBox())
   );
   armScare();
 }
@@ -1227,17 +1261,17 @@ function descBox(name, text){
   );
 }
 function mountFront(body){ body.append(h('div',{class:'obj'}, descBox('해적선', CONTENT.ship)), h('div',{class:'obj'}, descBox('벤틀리', CONTENT.bentley))); }
-function mountBack(body){ body.append(h('div',{class:'obj'}, descBox('블랙 타지마할', CONTENT.taj))); }
+function mountBack(body){ body.append(h('div',{class:'obj'}, descBox('블랙 타지마할', CONTENT.taj)), obj('뒷마당 산책', walkBox())); }
 
 /* ===== 방 열고 닫기 ===== */
 var ROOMS = {
-  living:  { mount: mountLiving,  widgets:['tv','marker','sofa'] },
+  living:  { mount: mountLiving,  widgets:['tv','marker','sofa','vase'] },
   entry:   { mount: mountEntry,   widgets:['guestbook','door','mood'] },
   kitchen: { mount: mountKitchen, widgets:['board','fridge','pantry'] },
   study:   { mount: mountStudy,   widgets:['knock'] },
   util:    { mount: mountUtil,    widgets:[] },
   front:   { mount: mountFront,   widgets:[] },
-  back:    { mount: mountBack,    widgets:[] }
+  back:    { mount: mountBack,    widgets:['walk'] }
 };
 var openRoom = null;
 function closeRoom(id){
@@ -1266,6 +1300,7 @@ document.querySelectorAll('.room').forEach(function(el){
 });
 
 /* ===== 소파 휴식, 찬장과 싱크대, 기분 다이얼, 노크, 냉장고 기록 ===== */
+S.vase = null; S.pocket = (function(){ var ids = CONTENT.garden.flowers.map(function(f){ return f.id; }); var a = lsGet('crowley.pocket', []); return Array.isArray(a) ? a.filter(function(x){ return ids.indexOf(x) >= 0; }).slice(0, CONTENT.garden.pocketMax) : []; })();
 S.sofa = null; S.pantry = null; S.mood = null; S.knock = null; S.fridgeStats = null;
 var SOFA_EGG = ['빌리', '빌리 루소', '케인', 'caine'], PANTRY_N = 8, SINK_MAX = 6;
 function dayKST(ms){
@@ -1276,6 +1311,129 @@ function bump(docName, field, n){
   if (!(canShare && fs) || S.off[docName]) return;
   var patch = {}; patch[field] = increment(n || 1);
   setDoc(doc(fs, 'house', docName), patch, { merge: true }).catch(function(){ S.off[docName] = true; redrawAll(); });
+}
+
+/* 뒷마당 산책, 주머니, 거실 꽃병 */
+function flowerById(id){
+  var l = CONTENT.garden.flowers;
+  for (var i = 0; i < l.length; i++){ if (l[i].id === id) return l[i]; }
+  return null;
+}
+function rollFlower(){
+  var l = CONTENT.garden.flowers, tot = 0, i;
+  for (i = 0; i < l.length; i++) tot += l[i].w;
+  var r = Math.random() * tot;
+  for (i = 0; i < l.length; i++){ r -= l[i].w; if (r < 0) return l[i]; }
+  return l[0];
+}
+function pocketSave(){ lsSet('crowley.pocket', S.pocket); }
+function walkBox(){
+  var G = CONTENT.garden;
+  var said = h('p',{class:'flavor','aria-live':'polite'}, G.idle);
+  var hint = h('p',{class:'hint'});
+  var walking = false;
+  function waitMs(){
+    var at = Number(lsGet('crowley.walkAt', 0)) || at0;
+    return Math.max(0, at + G.cooldownMin * 60000 - Date.now());
+  }
+  function waitText(){ return Math.ceil(waitMs() / 60000) + '분 뒤에 다시 갈 수 있어요.'; }
+  var at0 = 0;
+  var btn = h('button',{class:'btn',type:'button',onclick:function(){
+    if (walking) return;
+    if (waitMs() > 0){ said.textContent = G.resting + ' ' + waitText(); widgets.walk && widgets.walk(); return; }
+    if (S.pocket.length >= G.pocketMax){ said.textContent = G.full; return; }
+    walking = true; btn.disabled = true; said.textContent = G.walking;
+    at0 = Date.now(); lsSet('crowley.walkAt', at0);
+    setTimeout(function(){
+      walking = false;
+      if (!btn.isConnected) return;
+      if (Math.random() < G.noneChance){ said.textContent = pick(G.none); }
+      else {
+        var f = rollFlower();
+        S.pocket.push(f.id); pocketSave();
+        said.textContent = f.icon + ' ' + f.name + G.got;
+      }
+      widgets.walk && widgets.walk();
+    }, 1500);
+  }}, '산책하기');
+  widgets.walk = function(){
+    var w = waitMs();
+    if (said.textContent.indexOf(G.resting) === 0) said.textContent = w > 0 ? G.resting + ' ' + waitText() : G.idle;
+    hint.textContent = '주머니 ' + S.pocket.length + '/' + G.pocketMax + (w > 0 && !walking ? ' · ' + waitText() : '');
+    btn.disabled = walking || w > 0;
+  };
+  widgets.walk();
+  var wtick = setInterval(function(){
+    if (!btn.isConnected){ clearInterval(wtick); return; }
+    widgets.walk && widgets.walk();
+  }, 20000);
+  return h('div',{class:'tvwrap'}, said, btn, hint);
+}
+function vaseSlots(){
+  var d = S.vase || {}, out = [], now = Date.now(), ms = CONTENT.vase.hours * 3600000;
+  for (var i = 0; i < 5; i++){
+    var f = flowerById(d['f'+i]), t = typeof d['t'+i] === 'number' ? d['t'+i] : 0;
+    var live = !!(f && t > 0 && now - t < ms);
+    out.push({ f: live ? f : null, who: typeof d['w'+i] === 'string' ? d['w'+i] : '', t: t });
+  }
+  return out;
+}
+function vaseBox(){
+  var V = CONTENT.vase;
+  var said = h('p',{class:'flavor','aria-live':'polite'});
+  var lastP = h('p',{class:'hint'});
+  var status = h('p',{class:'hint'});
+  var shelf = h('div',{class:'vase'});
+  var pocketEl = h('div',{class:'pocket'});
+  var whoI = h('input',{type:'text',maxlength:'12',placeholder:'이름',autocomplete:'off','aria-label':'꽃을 꽂는 사람 이름'});
+  whoI.value = String(lsGet('crowley.vaseName', '')).slice(0, 12);
+  async function plant(id){
+    var at = S.pocket.indexOf(id);
+    if (at < 0) return;
+    if (!(canShare && fs) || S.off.vase){ status.textContent = '꽃병은 아직 준비 중이에요.'; return; }
+    var who = whoI.value.trim().slice(0, 12) || '누군가';
+    lsSet('crowley.vaseName', whoI.value.trim().slice(0, 12));
+    var sl = vaseSlots(), i = -1, b;
+    for (b = 0; b < sl.length; b++){ if (!sl[b].f){ i = b; break; } }
+    var pushed = false;
+    if (i < 0){
+      pushed = true; i = 0;
+      for (b = 1; b < sl.length; b++){ if (sl[b].t < sl[i].t) i = b; }
+    }
+    var patch = {}; patch['f'+i] = id; patch['w'+i] = who; patch['t'+i] = serverTimestamp();
+    try {
+      await setDoc(doc(fs, 'house', 'vase'), patch, { merge: true });
+    } catch(e){ S.off.vase = true; redrawAll(); return; }
+    var k = S.pocket.indexOf(id); if (k >= 0) S.pocket.splice(k, 1);
+    pocketSave();
+    var fl = flowerById(id);
+    said.textContent = fl.icon + ' ' + fl.name + ' 한 송이를 꽃병에 꽂았다.' + (pushed ? V.pushed : '');
+    widgets.vase();
+  }
+  widgets.vase = function(){
+    var off = !(canShare && fs) || S.off.vase;
+    var sl = vaseSlots();
+    shelf.replaceChildren.apply(shelf, sl.map(function(x){
+      return x.f ? h('div',{class:'vslot'}, h('span',{class:'ic'}, x.f.icon), x.f.name) : h('div',{class:'vslot vacant'}, '비어 있음');
+    }));
+    var last = null;
+    sl.forEach(function(x){ if (x.f && (!last || x.t > last.t)) last = x; });
+    lastP.textContent = last ? (last.who || '누군가') + V.by : V.empty;
+    var groups = {}, order = [];
+    S.pocket.forEach(function(id){ if (!groups[id]){ groups[id] = 0; order.push(id); } groups[id]++; });
+    pocketEl.replaceChildren.apply(pocketEl, order.length ? order.map(function(id){
+      var f = flowerById(id);
+      return h('button',{class:'btn',type:'button',disabled: off,'aria-label':f.name + ' 꽂기',onclick:function(){ plant(id); }}, f.icon + ' ' + f.name + (groups[id] > 1 ? ' ×' + groups[id] : ''));
+    }) : [h('span',{class:'hint'}, V.pocketEmpty)]);
+    status.textContent = off ? '꽃병은 아직 준비 중이에요.' : '';
+    whoI.hidden = !order.length || off;
+  };
+  widgets.vase();
+  var tick = setInterval(function(){
+    if (!shelf.isConnected){ clearInterval(tick); return; }
+    widgets.vase && widgets.vase();
+  }, 30000);
+  return h('div',{class:'tvwrap'}, shelf, said, lastP, h('div',{class:'fcap'}, '주머니'), pocketEl, h('div',{class:'row'}, whoI), status);
 }
 
 /* 소파: 15분(숨겨진 이름이면 30분) 동안 한 사람만 쉴 수 있다. 잠금은 규칙이 서버 시간으로 확인한다 */
@@ -1643,7 +1801,7 @@ notesMount();
   }
   var PALETTE = ['#3b4a63','#4b3b63','#3b6358','#63503b','#633b4a','#3b5263','#4a633b','#63603b','#533b63','#3b5f63','#63453b','#4f633b','#3b4663','#633b59','#3b635a','#5a3b63','#5b4a3f','#2f2f36','#6b2a37','#2a5a6b',
     '#7a6a2a','#7a4026','#8f2a2a','#8a5568','#6a5f8a','#5f7a8a','#6a7a5f','#24442f','#243050','#2a6b64','#4a4f57','#8a8577'];
-  var SIGNS = ['부재중', '휴식 중', '노크 금지', '출입허용', '출입금지'];
+  var SIGNS = ['부재중', '휴식 중', '노크 금지', '출입허용', '출입금지', '순찰중'];
   var pickColor = '', pickSign = '';
   var signEls = [''].concat(SIGNS).map(function(t){
     var b = h('button',{class:'btn signbtn',type:'button','aria-pressed':'false',onclick:function(){ pickSign = t; paintSigns(); }}, t || '팻말 떼기');
@@ -1852,10 +2010,18 @@ try {
   onSnapshot(doc(fs, 'house', 'marker'), markerOnState, featureOff('marker'));
   onSnapshot(collection(fs, 'guestRooms'), function(snap){
     var map = {};
-    snap.docs.forEach(function(d){ var x = d.data(); map[d.id] = { st: x.st, pin: x.pin || '', desc: x.desc || '', name: x.name || '', color: /^#[0-9a-f]{6}$/i.test(x.color || '') ? x.color : '', sign: ['부재중', '휴식 중', '노크 금지', '출입허용', '출입금지'].indexOf(x.sign) >= 0 ? x.sign : '' }; });
+    snap.docs.forEach(function(d){ var x = d.data(); map[d.id] = { st: x.st, pin: x.pin || '', desc: x.desc || '', name: x.name || '', color: /^#[0-9a-f]{6}$/i.test(x.color || '') ? x.color : '', sign: ['부재중', '휴식 중', '노크 금지', '출입허용', '출입금지', '순찰중'].indexOf(x.sign) >= 0 ? x.sign : '' }; });
     S.rooms = map;
     redraw('rooms');
   }, featureOff('rooms'));
+  onSnapshot(doc(fs, 'house', 'vase'), function(snap){
+    if (!snap.exists()){ S.vase = null; } else {
+      var x = snap.data(), v = {};
+      for (var i = 0; i < 5; i++){ v['f'+i] = x['f'+i]; v['w'+i] = x['w'+i]; v['t'+i] = x['t'+i] ? tsMs(x['t'+i]) : (x['f'+i] ? Date.now() : 0); }
+      S.vase = v;
+    }
+    redraw('vase');
+  }, featureOff('vase'));
   onSnapshot(doc(fs, 'house', 'sofa'), function(snap){
     if (!snap.exists()){ S.sofa = null; } else {
       var x = snap.data({ serverTimestamps: 'estimate' });
