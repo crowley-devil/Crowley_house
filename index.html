@@ -131,6 +131,18 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .gb .del{margin-top:2px; font-size:12px; min-height:0; padding:1px 8px; color:var(--crimson); border-color:#5a2a34}
 .foods{display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:6px}
 .food{text-align:center; padding:8px 6px; background:var(--room-deep); overflow-wrap:anywhere}
+.fridge2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; width:100%}
+.fcol{display:grid; gap:6px; align-content:start; min-width:0}
+.fcap{font-size:12px; letter-spacing:.08em; color:var(--muted)}
+.food.vacant{display:grid; place-items:center; min-height:40px; border:1px dashed var(--line); border-radius:3px; color:var(--muted); font-size:13px}
+.mgrid{display:grid; grid-template-columns:repeat(5,minmax(0,46px)); gap:5px}
+.mcell{aspect-ratio:1; min-height:0; padding:0; font-variant-numeric:tabular-nums}
+.mcell.none{color:var(--muted)}
+.mcell.win{color:#e6c85a; border-color:#e6c85a}
+.mcell.dud{color:var(--crimson); border-color:var(--crimson)}
+.mcell:disabled{cursor:default}
+.pager{justify-content:space-between}
+.btn[disabled]{opacity:.4; cursor:default}
 
 .odd{
   position:relative; width:100%; height:100%; padding:0; cursor:pointer; border-radius:2px;
@@ -219,7 +231,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, doc, setDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, doc, setDoc, getDocs, onSnapshot, query, where, orderBy, limit, startAfter, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* 공개용 설정값입니다. 비밀 키가 아니라서 페이지에 들어 있어도 됩니다. 안전은 Firestore 보안 규칙이 지킵니다. */
 const firebaseConfig = {
@@ -283,8 +295,17 @@ var CONTENT = {
   ],
   tableItems: ['식은 커피잔','포장된 디저트 박스','카드 한 벌','파란 경찰 부스 키링','싱글 몰트 위스키 반 병','오만과 편견','눈알 모양 젤리 한 봉지','휘갈겨 쓴 메모지','읽다 만 책','검은 안경','열쇠 꾸러미','촛대','빈 와인잔','릿츠 영수증 한 장','시든 장미 한 송이'],
   shoes: ['반들반들한 검은 뱀 가죽 구두','진흙 묻은 부츠','끈 풀린 운동화','슬리퍼 한 짝','처음 보는 구두','굽이 닳은 로퍼','말끔한 구두','옆면이 닳은 구두','러닝화'],
-  foods: ['오믈렛','사과 반쪽','에그 인 헬','티라미수','남은 피자','포도','요거트','딤섬','잼 병','푸딩','초콜릿','레몬','샐러드','수상한 병',
+  foods: ['에그 인 헬','티라미수','딤섬','수상한 병',
     '푸아그라','트러플 리조또','캐비어 한 스푼','랍스터 테르미도르','마카롱 상자','크렘 브륄레','와규 스테이크','생굴 한 접시','연어 카나페','샴페인 한 병','에클레어','프로슈토 멜론','비프 웰링턴','밀푀유'],
+  marker: {
+    winLabel: '당첨!',
+    dudLabel: '꽝.',
+    win: ['10달러 지폐 한 장을 받았다.', '사탕을 받았다.', '초콜릿을 받았다.'],
+    dud: ['가벼운 작은 공에 맞았다.', '감초 사탕을 받았다.', '작은 숯덩어리를 받았다.'],
+    none: ['아무 일도 일어나지 않았다.'],
+    again: '새 판이 시작됐다.',
+    others: { win: '누군가 방금 당첨됐다!', dud: '누군가 방금 꽝에 걸렸다.' }
+  },
   notice: '외출 중. 돌아오는 시간은 미정.',
   ship: '해적을 꿈꾸는 수탉의 배',
   taj: '어떤 고담 악당이 미리 만들어 둔 미래의 주거지',
@@ -409,11 +430,14 @@ var fs = null, canShare = false;
 var S = {
   guestRemote: [], guestLocal: lsGet('crowley.guest', []),
   board: [], boardLocal: lsGet('crowley.board', []),
-  fridge: null, door: null,
+  fridge: null, door: null, fridgeUser: null,
+  off: {},
   defaultSlots: pickN(CONTENT.foods, 6)
 };
 function tsMs(t){ return (t && t.toMillis) ? t.toMillis() : Date.now(); }
 function shareFailed(){ canShare = false; redrawAll(); }
+/* 새 기능은 규칙이 아직 게시되지 않았거나 오류가 나도 그 기능만 내 브라우저 안에서 돌아가게 한다 */
+function featureOff(name){ return function(){ S.off[name] = true; redrawAll(); }; }
 var widgets = {};
 function redraw(n){ if (widgets[n]) widgets[n](); }
 function redrawAll(){ Object.keys(widgets).forEach(redraw); }
@@ -523,11 +547,45 @@ function phoneBox(){
 }
 
 /* ===== 현관 ===== */
-function guestRows(){
-  var rows = S.guestRemote.map(function(r){ return { n:r.n, t:r.t, ts:r.ts }; });
+var G = { page: 0, pages: [], err: '' };
+function toRow(d){
+  var x = d.data({ serverTimestamps: 'estimate' });
+  return { n: x.n, t: x.t, ts: tsMs(x.ts), _doc: d };
+}
+function guestPage(){
+  if (G.page > 0 && G.pages[G.page]) return G.pages[G.page];
+  var rows = S.guestRemote.slice();
   S.guestLocal.forEach(function(e){ rows.push({ n:e.n, t:e.t, ts:e.ts, local:true }); });
   rows.sort(function(a,b){ return b.ts - a.ts; });
-  return rows.slice(0, 15);
+  return { rows: rows.slice(0, 10), more: rows.length > 10 };
+}
+async function guestOlder(){
+  var cur = guestPage();
+  if (!cur.more || !fs) return;
+  var next = G.pages[G.page + 1];
+  if (!next){
+    var last = null;
+    cur.rows.forEach(function(r){ if (r._doc) last = r._doc; });
+    if (!last) return;
+    try {
+      var snap = await getDocs(query(collection(fs, 'guestbook'), orderBy('ts', 'desc'), startAfter(last), limit(11)));
+      var rows = snap.docs.map(toRow);
+      next = { rows: rows.slice(0, 10), more: rows.length > 10 };
+      G.pages[G.page + 1] = next;
+    } catch(e){
+      G.err = '이전 글을 불러오지 못했어요.';
+      redraw('guestbook');
+      return;
+    }
+  }
+  G.page++; G.err = '';
+  redraw('guestbook');
+}
+function guestNewer(){
+  if (G.page <= 0) return;
+  G.page--; G.err = '';
+  if (G.page === 0) G.pages = [];
+  redraw('guestbook');
 }
 async function addGuest(n, t){
   var name = (n || '이름 없는 손님').slice(0, 12);
@@ -544,26 +602,33 @@ function guestbookBox(){
   var status = h('p',{class:'hint'});
   var nameI = h('input',{id:'gb-name',type:'text',maxlength:'12',placeholder:'이름',autocomplete:'off','aria-label':'이름'});
   var textI = h('input',{id:'gb-text',type:'text',maxlength:'60',placeholder:'한 줄 남기기',autocomplete:'off','aria-label':'방명록 한 줄'});
+  var newerBtn = h('button',{class:'btn',type:'button',onclick:guestNewer},'최신 글');
+  var olderBtn = h('button',{class:'btn',type:'button',onclick:guestOlder},'이전 글');
+  var pager = h('div',{class:'row pager'}, newerBtn, olderBtn);
   var form = h('form',{class:'row',onsubmit:async function(e){
     e.preventDefault();
     var t = textI.value.trim();
     if (!t) return;
     textI.value = '';
     await addGuest(nameI.value.trim(), t);
+    G.page = 0; G.pages = []; G.err = '';
     redraw('guestbook');
   }}, nameI, textI, h('button',{class:'btn',type:'submit'},'남기기'));
   widgets.guestbook = function(){
-    status.textContent = sharedHint();
-    var rows = guestRows();
-    list.replaceChildren.apply(list, rows.length ? rows.map(function(r){
+    var pg = guestPage();
+    status.textContent = G.err || sharedHint();
+    list.replaceChildren.apply(list, pg.rows.length ? pg.rows.map(function(r){
       return h('li',null,
         h('span',{class:'who'}, r.n), h('span',{class:'when'}, fmt(r.ts)),
         h('p',{class:'msg'}, r.t)
       );
     }) : [h('li',null,h('p',{class:'empty'},'아직 아무도 이름을 남기지 않았다.'))]);
+    newerBtn.disabled = G.page === 0;
+    olderBtn.disabled = !pg.more;
+    pager.hidden = !(G.page > 0 || pg.more);
   };
   widgets.guestbook();
-  return h('div',{class:'tvwrap',style:'width:100%'}, form, status, list);
+  return h('div',{class:'tvwrap',style:'width:100%'}, form, status, list, pager);
 }
 
 function curNotice(){
@@ -600,7 +665,8 @@ function mountLiving(body){
     obj('왕좌 의자', h('p',{class:'flavor'}, CONTENT.throne)),
     obj('텔레비전', tvBox()),
     obj('책상 위 전화', phoneBox()),
-    obj('테이블', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.'), tarotBox())
+    obj('테이블', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.'), tarotBox()),
+    obj('마커판', markerBox())
   );
   armScare();
 }
@@ -656,25 +722,47 @@ async function saveFridge(next){
   }
   S.fridge = { slots: next };
 }
+/* 오른쪽 6칸: 방문자가 넣고 꺼내는 칸. 칸마다 이름(s)과 넣은 시각(t)을 따로 저장한다 */
+function userSlots(){
+  var d = S.fridgeUser || {}, out = [];
+  for (var i = 0; i < 6; i++){
+    out.push({ n: typeof d['s'+i] === 'string' ? d['s'+i] : '', t: typeof d['t'+i] === 'number' ? d['t'+i] : 0 });
+  }
+  return out;
+}
+async function saveUserSlot(i, name){
+  var patch = {};
+  patch['s'+i] = name;
+  patch['t'+i] = name ? Date.now() : 0;
+  if (canShare && fs && !S.off.fridgeUser){
+    try { await setDoc(doc(fs, 'house', 'fridgeUser'), patch, { merge: true }); return; }
+    catch(e){ S.off.fridgeUser = true; }
+  }
+  S.fridgeUser = Object.assign({}, S.fridgeUser || {}, patch);
+}
 function fridgeBox(){
-  var grid = h('div',{class:'foods'});
+  var left = h('div',{class:'fcol'});
+  var right = h('div',{class:'fcol'});
   var said = h('p',{class:'flavor','aria-live':'polite'},'냉장고 안이 가득 차 있다.');
   var status = h('p',{class:'hint'});
   var input = h('input',{id:'food-name',type:'text',maxlength:'12',placeholder:'넣을 음식 이름',autocomplete:'off','aria-label':'넣을 음식 이름'});
   var form = h('form',{class:'row',onsubmit:async function(e){
     e.preventDefault();
-    var name = input.value.trim();
+    var name = input.value.trim().slice(0, 12);
     if (!name) return;
     input.value = '';
-    var cur = slots().slice();
-    var i = Math.floor(Math.random()*cur.length);
-    var old = cur[i];
-    cur[i] = name;
-    await saveFridge(cur);
-    said.textContent = name + ' 넣음. ' + old + '은(는) 안쪽으로 밀려났다.';
+    var sl = userSlots(), i = -1, pushed = '';
+    for (var a = 0; a < sl.length; a++){ if (!sl[a].n){ i = a; break; } }
+    if (i < 0){
+      i = 0;
+      for (var b = 1; b < sl.length; b++){ if (sl[b].t < sl[i].t) i = b; }
+      pushed = sl[i].n;
+    }
+    await saveUserSlot(i, name);
+    said.textContent = name + ' 넣음.' + (pushed ? ' 가장 오래된 ' + pushed + '은(는) 밀려났다.' : '');
     redraw('fridge');
   }}, input, h('button',{class:'btn',type:'submit'},'넣기'));
-  async function take(i){
+  async function takeLeft(i){
     var cur = slots().slice();
     var old = cur[i];
     var fresh = CONTENT.foods.filter(function(f){ return cur.indexOf(f) < 0; });
@@ -684,14 +772,147 @@ function fridgeBox(){
     said.textContent = old + ' 꺼냄. 빈 자리에는 어느새 ' + nf + '.';
     redraw('fridge');
   }
+  async function takeRight(i){
+    var old = userSlots()[i].n;
+    if (!old) return;
+    await saveUserSlot(i, '');
+    said.textContent = old + ' 꺼냄.';
+    redraw('fridge');
+  }
   widgets.fridge = function(){
-    status.textContent = sharedHint();
-    grid.replaceChildren.apply(grid, slots().map(function(f, i){
-      return h('button',{class:'btn food',type:'button',onclick:function(){ take(i); }}, f);
-    }));
+    status.textContent = (canShare && !S.off.fridgeUser) ? '' : '여기 남긴 흔적은 지금 내 브라우저에만 보여요.';
+    left.replaceChildren.apply(left, [h('div',{class:'fcap'},'크롤리의 칸')].concat(slots().map(function(f, i){
+      return h('button',{class:'btn food',type:'button',onclick:function(){ takeLeft(i); }}, f);
+    })));
+    right.replaceChildren.apply(right, [h('div',{class:'fcap'},'함께 쓰는 칸')].concat(userSlots().map(function(sl, i){
+      return sl.n
+        ? h('button',{class:'btn food',type:'button',onclick:function(){ takeRight(i); }}, sl.n)
+        : h('div',{class:'food vacant'}, '비어 있음');
+    })));
   };
   widgets.fridge();
-  return h('div',{class:'tvwrap',style:'width:100%'}, grid, said, form, status);
+  return h('div',{class:'tvwrap',style:'width:100%'}, h('div',{class:'fridge2'}, left, right), said, form, status);
+}
+
+/* ===== 마커판 (거실 테이블 위) ===== */
+/* 한 판에 당첨 1칸, 꽝 1칸. 둘 다 나오면 잠시 뒤 새 판이 시작된다. 선물은 화면 속 문구뿐이라 정답 위치를 숨기지 않는다 */
+var M = { st: null, marks: {}, mine: {}, said: '', unsub: null, firstSnap: true, resetTried: 0, initTried: false };
+function markerShared(){ return !!(canShare && fs && !S.off.marker); }
+function randCells(){
+  var w = Math.floor(Math.random()*25), d;
+  do { d = Math.floor(Math.random()*25); } while (d === w);
+  return { win: w, dud: d };
+}
+function markerText(k, m){
+  var list = CONTENT.marker[k] || CONTENT.marker.none;
+  var label = k === 'win' ? CONTENT.marker.winLabel + ' ' : k === 'dud' ? CONTENT.marker.dudLabel + ' ' : '';
+  return label + list[m % list.length];
+}
+function markerCheckDone(){
+  var st = M.st;
+  if (!st || !M.marks[st.win] || !M.marks[st.dud] || M.resetTried === st.round) return;
+  M.resetTried = st.round;
+  setTimeout(function(){
+    if (!M.st || M.st.round !== st.round) return;
+    var n = randCells();
+    if (markerShared()){
+      setDoc(doc(fs, 'house', 'marker'), { round: st.round + 1, win: n.win, dud: n.dud }).catch(function(){});
+    } else {
+      M.st = { round: st.round + 1, win: n.win, dud: n.dud };
+      M.marks = {}; M.mine = {}; M.said = CONTENT.marker.again;
+      redraw('marker');
+    }
+  }, 4000);
+}
+function markerSubscribe(round){
+  if (M.unsub) M.unsub();
+  M.firstSnap = true;
+  M.unsub = onSnapshot(query(collection(fs, 'markerMarks'), where('r', '==', round)), function(snap){
+    var marks = {};
+    snap.docs.forEach(function(d){
+      var x = d.data();
+      if (typeof x.c === 'number' && x.c >= 0 && x.c <= 24 && !marks[x.c]) marks[x.c] = { k: x.k, m: x.m };
+    });
+    if (!M.firstSnap){
+      snap.docChanges().forEach(function(ch){
+        if (ch.type !== 'added') return;
+        var x = ch.doc.data();
+        if (!M.mine[x.c] && (x.k === 'win' || x.k === 'dud')) M.said = CONTENT.marker.others[x.k];
+      });
+    }
+    M.firstSnap = false;
+    M.marks = marks;
+    redraw('marker');
+    markerCheckDone();
+  }, featureOff('marker'));
+}
+function markerOnState(snap){
+  if (!snap.exists()){
+    if (!M.initTried){
+      M.initTried = true;
+      var n = randCells();
+      setDoc(doc(fs, 'house', 'marker'), { round: 1, win: n.win, dud: n.dud }).catch(function(){});
+    }
+    return;
+  }
+  var d = snap.data();
+  if (typeof d.round !== 'number' || typeof d.win !== 'number' || typeof d.dud !== 'number') return;
+  var changed = !M.st || M.st.round !== d.round;
+  var had = !!M.st;
+  M.st = { round: d.round, win: d.win, dud: d.dud };
+  if (changed){
+    M.marks = {}; M.mine = {};
+    if (had) M.said = CONTENT.marker.again;
+    markerSubscribe(d.round);
+  }
+  redraw('marker');
+}
+async function markCell(c){
+  if (M.marks[c]) return;
+  var st = M.st;
+  if (!st){ M.said = '판을 불러오는 중이에요.'; redraw('marker'); return; }
+  var k = c === st.win ? 'win' : c === st.dud ? 'dud' : 'none';
+  var m = Math.floor(Math.random()*50);
+  M.mine[c] = true;
+  if (markerShared()){
+    try { await setDoc(doc(fs, 'markerMarks', 'r' + st.round + 'c' + c), { r: st.round, c: c, k: k, m: m, ts: serverTimestamp() }); }
+    catch(e){
+      delete M.mine[c];
+      M.said = '그 칸은 이미 눌렸거나, 지금은 누를 수 없어요.';
+      redraw('marker');
+      return;
+    }
+  } else {
+    M.marks[c] = { k: k, m: m };
+  }
+  M.said = markerText(k, m);
+  redraw('marker');
+  markerCheckDone();
+}
+function markerBox(){
+  var grid = h('div',{class:'mgrid'});
+  var said = h('p',{class:'flavor','aria-live':'polite'});
+  var info = h('p',{class:'hint'});
+  widgets.marker = function(){
+    if (!markerShared() && !M.st){ var n = randCells(); M.st = { round: 0, win: n.win, dud: n.dud }; }
+    var st = M.st;
+    var cells = [];
+    for (var c = 0; c < 25; c++){
+      (function(c){
+        var mk = M.marks[c];
+        cells.push(h('button',{class:'btn mcell' + (mk ? ' ' + mk.k : ''), type:'button', disabled: !!mk, 'aria-label': (c + 1) + '번 칸',
+          onclick:function(){ markCell(c); }}, mk ? (mk.k === 'win' ? '★' : mk.k === 'dud' ? '●' : '×') : String(c + 1)));
+      })(c);
+    }
+    grid.replaceChildren.apply(grid, cells);
+    said.textContent = M.said;
+    var count = Object.keys(M.marks).length;
+    info.textContent = !st ? '판을 불러오는 중이에요.' :
+      '눌린 칸 ' + count + '/25 · 당첨 ' + (M.marks[st.win] ? '나옴' : '아직') + ' · 꽝 ' + (M.marks[st.dud] ? '나옴' : '아직') +
+      (markerShared() ? '' : ' · 지금은 내 브라우저에서만 돌아가요.');
+  };
+  widgets.marker();
+  return h('div',{class:'tvwrap'}, grid, said, info);
 }
 
 function mountKitchen(body){
@@ -760,7 +981,7 @@ function mountBack(body){ body.append(h('div',{class:'obj'}, descBox('블랙 타
 
 /* ===== 방 열고 닫기 ===== */
 var ROOMS = {
-  living:  { mount: mountLiving,  widgets:['tv'] },
+  living:  { mount: mountLiving,  widgets:['tv','marker'] },
   entry:   { mount: mountEntry,   widgets:['guestbook','door'] },
   kitchen: { mount: mountKitchen, widgets:['board','fridge'] },
   study:   { mount: mountStudy,   widgets:[] },
@@ -852,8 +1073,8 @@ loop(tvOn, 45, 130);
 try {
   fs = getFirestore(initializeApp(firebaseConfig));
   canShare = true;
-  onSnapshot(query(collection(fs, 'guestbook'), orderBy('ts', 'desc'), limit(15)), function(snap){
-    S.guestRemote = snap.docs.map(function(d){ var x = d.data({ serverTimestamps: 'estimate' }); return { n: x.n, t: x.t, ts: tsMs(x.ts) }; });
+  onSnapshot(query(collection(fs, 'guestbook'), orderBy('ts', 'desc'), limit(11)), function(snap){
+    S.guestRemote = snap.docs.map(toRow);
     redraw('guestbook');
   }, shareFailed);
   onSnapshot(query(collection(fs, 'whiteboard'), orderBy('ts', 'desc'), limit(12)), function(snap){
@@ -862,6 +1083,8 @@ try {
   }, shareFailed);
   onSnapshot(doc(fs, 'house', 'fridge'), function(snap){ S.fridge = snap.exists() ? snap.data() : null; redraw('fridge'); }, shareFailed);
   onSnapshot(doc(fs, 'house', 'doorNote'), function(snap){ S.door = snap.exists() ? snap.data() : null; redraw('door'); }, shareFailed);
+  onSnapshot(doc(fs, 'house', 'fridgeUser'), function(snap){ S.fridgeUser = snap.exists() ? snap.data() : null; redraw('fridge'); }, featureOff('fridgeUser'));
+  onSnapshot(doc(fs, 'house', 'marker'), markerOnState, featureOff('marker'));
 } catch(e){ canShare = false; }
 })();
 </script>
