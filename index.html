@@ -160,10 +160,14 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .fridge2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; width:100%}
 .fcol{display:grid; gap:4px; align-content:start; min-width:0}
 .fcap{font-size:12px; letter-spacing:.08em; color:var(--muted)}
-.vase{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; width:100%}
-.vslot{text-align:center; font-size:12px; padding:6px 2px; min-height:58px; border:1px solid var(--line); border-radius:3px; background:var(--room-deep); overflow-wrap:anywhere}
-.vslot .ic{display:block; font-size:22px; line-height:1.25}
-.vslot.vacant{display:grid; place-items:center; border-style:dashed; color:var(--muted)}
+.vasewrap{width:100%; max-width:260px; margin:0 auto}
+.vasewrap svg{display:block; width:100%; height:auto}
+.vasewrap .stem{stroke:#4c8a5a; stroke-width:2.5; stroke-linecap:round}
+.vasewrap .flw{font-size:30px}
+.vasewrap .vbody{fill:#2a3140; stroke:#566176; stroke-width:1.5}
+.vasewrap .vrim{fill:#343c4d; stroke:#566176; stroke-width:1.2}
+.vasewrap .vshine{stroke:rgba(255,255,255,.18); stroke-width:3; stroke-linecap:round}
+.vnames{text-align:center}
 .pocket{display:flex; flex-wrap:wrap; gap:6px}
 .food.vacant{display:grid; place-items:center; min-height:34px; border:1px dashed var(--line); border-radius:3px; color:var(--muted); font-size:13px}
 .mgrid{display:grid; grid-template-columns:repeat(5,minmax(0,46px)); gap:5px}
@@ -323,7 +327,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-6)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-10)</p>
 </main>
 
 <script type="module">
@@ -436,8 +440,22 @@ var CONTENT = {
     full: '주머니가 가득 차서 더 담을 수 없다.',
     pocketMax: 10,
     cooldownMin: 30,
-    resting: '아직 다리가 쉬는 중이다.',
-    noneChance: 0.18,
+    resting: '산책을 하기엔 아직 이른 것 같다.',
+    noneChance: 0.12,
+    findChance: 0.25,
+    finds: [
+      '도토리 하나가 발치로 굴러왔다. 잠깐 쥐었다가 제자리에 두었다.',
+      '개미들이 빵 부스러기를 줄 맞춰 나르고 있다. 길을 비켜 주었다.',
+      '까마귀 한 마리가 이쪽을 한참 쳐다보다 날아갔다.',
+      '달팽이가 지나간 은빛 자국이 블랙 타지마할 쪽으로 이어져 있다.',
+      '나비가 어깨에 잠깐 앉았다 갔다.',
+      '네 잎 클로버인 줄 알았는데 세어 보니 세 잎이었다.',
+      '누군가 쌓아 둔 작은 돌탑이 바람에도 쓰러지지 않고 있다.',
+      '벌 한 마리가 머리 위를 한 바퀴 돌아보고 갔다.',
+      '풀숲에서 뱀이 고개를 들었다. 서로 못 본 척했다.',
+      '잎사귀 위에 이슬이 맺혀 있다. 건드리지 않고 지나갔다.',
+      '고양이 발자국이 잔디를 가로질러 나 있다.'
+    ],
     flowers: [
       { id: 'dandelion', name: '민들레', icon: '🌼', w: 25 },
       { id: 'tulip', name: '튤립', icon: '🌷', w: 18 },
@@ -860,13 +878,15 @@ function mountEntry(body){
 function mountLiving(body){
   var items = pickN(CONTENT.tableItems, Math.floor(Math.random()*3));
   body.append(
-    obj('왕좌 의자', h('p',{class:'flavor'}, CONTENT.throne)),
+    obj('꽃병', vaseBox()),
     obj('텔레비전', tvBox()),
     obj('책상 위 전화', phoneBox()),
     obj('테이블', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.'), tarotBox()),
     obj('마커판', markerBox()),
-    obj('소파', sofaBox()),
-    obj('꽃병', vaseBox())
+    obj('소파', sofaBox('sofa')),
+    obj('1인용 소파 1', sofaBox('sofa2')),
+    obj('1인용 소파 2', sofaBox('sofa3')),
+    obj('왕좌 의자', h('p',{class:'flavor'}, CONTENT.throne))
   );
   armScare();
 }
@@ -1265,7 +1285,7 @@ function mountBack(body){ body.append(h('div',{class:'obj'}, descBox('블랙 타
 
 /* ===== 방 열고 닫기 ===== */
 var ROOMS = {
-  living:  { mount: mountLiving,  widgets:['tv','marker','sofa','vase'] },
+  living:  { mount: mountLiving,  widgets:['tv','marker','sofa','sofa2','sofa3','vase'] },
   entry:   { mount: mountEntry,   widgets:['guestbook','door','mood'] },
   kitchen: { mount: mountKitchen, widgets:['board','fridge','pantry'] },
   study:   { mount: mountStudy,   widgets:['knock'] },
@@ -1301,7 +1321,7 @@ document.querySelectorAll('.room').forEach(function(el){
 
 /* ===== 소파 휴식, 찬장과 싱크대, 기분 다이얼, 노크, 냉장고 기록 ===== */
 S.vase = null; S.pocket = (function(){ var ids = CONTENT.garden.flowers.map(function(f){ return f.id; }); var a = lsGet('crowley.pocket', []); return Array.isArray(a) ? a.filter(function(x){ return ids.indexOf(x) >= 0; }).slice(0, CONTENT.garden.pocketMax) : []; })();
-S.sofa = null; S.pantry = null; S.mood = null; S.knock = null; S.fridgeStats = null;
+S.sofa = null; S.sofa2 = null; S.sofa3 = null; S.pantry = null; S.mood = null; S.knock = null; S.fridgeStats = null;
 var SOFA_EGG = ['빌리', '빌리 루소', '케인', 'caine'], PANTRY_N = 8, SINK_MAX = 6;
 function dayKST(ms){
   try { return new Date(ms).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }); }
@@ -1347,7 +1367,9 @@ function walkBox(){
     setTimeout(function(){
       walking = false;
       if (!btn.isConnected) return;
-      if (Math.random() < G.noneChance){ said.textContent = pick(G.none); }
+      var roll = Math.random();
+      if (roll < G.noneChance){ said.textContent = pick(G.none); }
+      else if (roll < G.noneChance + G.findChance){ said.textContent = pick(G.finds); }
       else {
         var f = rollFlower();
         S.pocket.push(f.id); pocketSave();
@@ -1383,7 +1405,8 @@ function vaseBox(){
   var said = h('p',{class:'flavor','aria-live':'polite'});
   var lastP = h('p',{class:'hint'});
   var status = h('p',{class:'hint'});
-  var shelf = h('div',{class:'vase'});
+  var shelf = h('div',{class:'vasewrap'});
+  var namesP = h('p',{class:'hint vnames'});
   var pocketEl = h('div',{class:'pocket'});
   var whoI = h('input',{type:'text',maxlength:'12',placeholder:'이름',autocomplete:'off','aria-label':'꽃을 꽂는 사람 이름'});
   whoI.value = String(lsGet('crowley.vaseName', '')).slice(0, 12);
@@ -1413,9 +1436,20 @@ function vaseBox(){
   widgets.vase = function(){
     var off = !(canShare && fs) || S.off.vase;
     var sl = vaseSlots();
-    shelf.replaceChildren.apply(shelf, sl.map(function(x){
-      return x.f ? h('div',{class:'vslot'}, h('span',{class:'ic'}, x.f.icon), x.f.name) : h('div',{class:'vslot vacant'}, '비어 있음');
-    }));
+    var ANG = [-38, -19, 0, 19, 38], LEN = [74, 98, 112, 94, 70], cx = 120, my = 128, art = '';
+    sl.forEach(function(x, i){
+      if (!x.f) return;
+      var a = ANG[i] * Math.PI / 180, tx = cx + LEN[i] * Math.sin(a), ty = my - LEN[i] * Math.cos(a);
+      art += '<line class="stem" x1="' + cx + '" y1="' + (my + 4) + '" x2="' + tx.toFixed(1) + '" y2="' + (ty + 6).toFixed(1) + '"/>' +
+             '<text class="flw" x="' + tx.toFixed(1) + '" y="' + (ty + 10).toFixed(1) + '" text-anchor="middle">' + x.f.icon + '</text>';
+    });
+    var names = sl.filter(function(x){ return x.f; }).map(function(x){ return x.f.name; });
+    shelf.innerHTML = '<svg viewBox="0 -16 240 228" role="img" aria-label="' + (names.length ? '꽃병에 ' + names.join(', ') + ' 꽃이 꽂혀 있다' : '빈 꽃병') + '">' +
+      art +
+      '<path class="vbody" d="M100 130 L140 130 C140 142 158 152 158 176 C158 198 142 207 120 207 C98 207 82 198 82 176 C82 152 100 142 100 130 Z"/>' +
+      '<rect class="vrim" x="95" y="125" width="50" height="7" rx="2"/>' +
+      '<path class="vshine" d="M96 160 C94 172 96 184 104 192" fill="none"/></svg>';
+    namesP.textContent = names.length ? names.join(' · ') : '';
     var last = null;
     sl.forEach(function(x){ if (x.f && (!last || x.t > last.t)) last = x; });
     lastP.textContent = last ? (last.who || '누군가') + V.by : V.empty;
@@ -1433,18 +1467,18 @@ function vaseBox(){
     if (!shelf.isConnected){ clearInterval(tick); return; }
     widgets.vase && widgets.vase();
   }, 30000);
-  return h('div',{class:'tvwrap'}, shelf, said, lastP, h('div',{class:'fcap'}, '주머니'), pocketEl, h('div',{class:'row'}, whoI), status);
+  return h('div',{class:'tvwrap'}, shelf, namesP, said, lastP, h('div',{class:'fcap'}, '주머니'), pocketEl, h('div',{class:'row'}, whoI), status);
 }
 
 /* 소파: 15분(숨겨진 이름이면 30분) 동안 한 사람만 쉴 수 있다. 잠금은 규칙이 서버 시간으로 확인한다 */
-function sofaState(){
-  var d = S.sofa;
+function sofaState(id){
+  var d = S[id];
   if (!d || typeof d.start !== 'number') return null;
   var left = d.start + (d.mins === 30 ? 30 : 15)*60000 - Date.now();
   if (d.rel || left <= 0) return null;
   return { who: d.who, uid: d.uid, left: left, blanket: !!d.blanket };
 }
-function sofaBox(){
+function sofaBox(id){
   var said = h('p',{class:'flavor','aria-live':'polite'});
   var status = h('p',{class:'hint'});
   var nameI = h('input',{type:'text',maxlength:'12',placeholder:'이름',autocomplete:'off','aria-label':'쉴 사람 이름'});
@@ -1453,24 +1487,24 @@ function sofaBox(){
     e.preventDefault();
     var who = nameI.value.trim().replace(/\s+/g, ' ');
     if (!who) { status.textContent = '이름을 적어 주세요.'; return; }
-    if (sofaState()) return;
+    if (sofaState(id)) return;
     var mins = SOFA_EGG.indexOf(who.toLowerCase()) >= 0 ? 30 : 15;
-    if (!(canShare && fs && !S.off.sofa && N.authOk && myUid())){ status.textContent = '지금은 쉴 수 없어요.'; return; }
+    if (!(canShare && fs && !S.off[id] && N.authOk && myUid())){ status.textContent = '지금은 쉴 수 없어요.'; return; }
     status.textContent = '';
     try {
-      await setDoc(doc(fs, 'house', 'sofa'), { who: who.slice(0, 12), uid: myUid(), start: serverTimestamp(), rel: false, blanket: false, mins: mins });
+      await setDoc(doc(fs, 'house', id), { who: who.slice(0, 12), uid: myUid(), start: serverTimestamp(), rel: false, blanket: false, mins: mins });
       nameI.value = '';
     } catch(err){ said.textContent = CONTENT.sofa.busy; }
   }}, nameI, restBtn);
   var upBtn = h('button',{class:'btn',type:'button',onclick:async function(){
-    try { await updateDoc(doc(fs, 'house', 'sofa'), { rel: true }); said.textContent = CONTENT.sofa.up; } catch(err){}
+    try { await updateDoc(doc(fs, 'house', id), { rel: true }); said.textContent = CONTENT.sofa.up; } catch(err){}
   }},'일어나기');
   var coverBtn = h('button',{class:'btn',type:'button',onclick:async function(){
-    try { await updateDoc(doc(fs, 'house', 'sofa'), { blanket: true }); said.textContent = CONTENT.sofa.cover; } catch(err){}
+    try { await updateDoc(doc(fs, 'house', id), { blanket: true }); said.textContent = CONTENT.sofa.cover; } catch(err){}
   }},'담요 덮어주기');
-  widgets.sofa = function(){
-    var st = sofaState();
-    if (!(canShare && fs) || S.off.sofa){
+  widgets[id] = function(){
+    var st = sofaState(id);
+    if (!(canShare && fs) || S.off[id]){
       said.textContent = CONTENT.sofa.free;
       status.textContent = '소파는 아직 준비 중이에요.';
       form.hidden = true; upBtn.hidden = true; coverBtn.hidden = true;
@@ -1488,10 +1522,10 @@ function sofaBox(){
     }
     if (!st && status.textContent === '지금은 쉴 수 없어요.' && N.authOk) status.textContent = '';
   };
-  widgets.sofa();
+  widgets[id]();
   var tick = setInterval(function(){
     if (!said.isConnected){ clearInterval(tick); return; }
-    widgets.sofa && widgets.sofa();
+    widgets[id] && widgets[id]();
   }, 1000);
   return h('div',{class:'tvwrap'}, said, form, upBtn, coverBtn, status);
 }
@@ -2022,13 +2056,15 @@ try {
     }
     redraw('vase');
   }, featureOff('vase'));
-  onSnapshot(doc(fs, 'house', 'sofa'), function(snap){
-    if (!snap.exists()){ S.sofa = null; } else {
-      var x = snap.data({ serverTimestamps: 'estimate' });
-      S.sofa = { who: x.who, uid: x.uid, start: tsMs(x.start), rel: !!x.rel, blanket: !!x.blanket, mins: x.mins === 30 ? 30 : 15 };
-    }
-    redraw('sofa');
-  }, featureOff('sofa'));
+  ['sofa', 'sofa2', 'sofa3'].forEach(function(sid){
+    onSnapshot(doc(fs, 'house', sid), function(snap){
+      if (!snap.exists()){ S[sid] = null; } else {
+        var x = snap.data({ serverTimestamps: 'estimate' });
+        S[sid] = { who: x.who, uid: x.uid, start: tsMs(x.start), rel: !!x.rel, blanket: !!x.blanket, mins: x.mins === 30 ? 30 : 15 };
+      }
+      redraw(sid);
+    }, featureOff(sid));
+  });
   onSnapshot(doc(fs, 'house', 'pantry'), function(snap){
     S.pantry = snap.exists() ? snap.data() : null;
     if (!snap.exists()) pantryEnsure();
