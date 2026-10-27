@@ -201,6 +201,10 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .slot .meter{letter-spacing:.12em; font-size:12px; color:var(--teal); overflow-wrap:anywhere}
 .slot .empty{color:var(--muted); font-size:13px; margin:0}
 .slot .btn{min-height:30px; padding:3px 10px; font-size:13px}
+.wash{position:relative; overflow:hidden}
+.wash .fill{position:absolute; left:0; top:0; bottom:0; width:0; background:rgba(95,208,192,.38)}
+.wash.go .fill{width:100%; transition:width 3s linear}
+.wash .lbl2{position:relative}
 .mood{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
 .mood .face{font-size:34px; line-height:1}
 .gear{font-size:20px; line-height:1; transition:transform .5s}
@@ -294,7 +298,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 5)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 5-1)</p>
 </main>
 
 <script type="module">
@@ -391,7 +395,9 @@ var CONTENT = {
     free: '비어 있다. 쿠션이 적당히 눌려 있다.',
     taken: '님이 쉬고 있다.',
     up: '일어났다. 쿠션이 천천히 부풀어 오른다.',
-    busy: '방금 다른 누군가가 먼저 앉았다.'
+    busy: '방금 다른 누군가가 먼저 앉았다.',
+    blanket: '담요가 덮여 있다.',
+    cover: '살그머니 담요를 덮어 주었다.'
   },
   pantry: {
     coffee: { coffee: '커피', cocoa: '코코아' },
@@ -402,6 +408,8 @@ var CONTENT = {
       cereal: ['그릇에 한가득 담아 먹었다.', '우유가 어딘가에 있었던 것 같다.']
     },
     wash: '컵과 그릇을 말끔히 씻어 엎어 두었다.',
+    washing: '설거지 중…',
+    washGone: '이미 누군가 씻어 놨다.',
     full: '싱크대가 가득 차서 아무것도 먹을 수 없다. 설거지가 먼저다.',
     fail: '그사이 다른 누군가가 먼저 손을 댔다.'
   },
@@ -1231,7 +1239,7 @@ function sofaState(){
   if (!d || typeof d.start !== 'number') return null;
   var left = d.start + SOFA_MS - Date.now();
   if (d.rel || left <= 0) return null;
-  return { who: d.who, uid: d.uid, left: left };
+  return { who: d.who, uid: d.uid, left: left, blanket: !!d.blanket };
 }
 function sofaBox(){
   var said = h('p',{class:'flavor','aria-live':'polite'});
@@ -1246,27 +1254,31 @@ function sofaBox(){
     if (!(canShare && fs && !S.off.sofa && N.authOk && myUid())){ status.textContent = '지금은 쉴 수 없어요.'; return; }
     status.textContent = '';
     try {
-      await setDoc(doc(fs, 'house', 'sofa'), { who: who.slice(0, 12), uid: myUid(), start: serverTimestamp(), rel: false });
+      await setDoc(doc(fs, 'house', 'sofa'), { who: who.slice(0, 12), uid: myUid(), start: serverTimestamp(), rel: false, blanket: false });
       nameI.value = '';
     } catch(err){ said.textContent = CONTENT.sofa.busy; }
   }}, nameI, restBtn);
   var upBtn = h('button',{class:'btn',type:'button',onclick:async function(){
     try { await updateDoc(doc(fs, 'house', 'sofa'), { rel: true }); said.textContent = CONTENT.sofa.up; } catch(err){}
   }},'일어나기');
+  var coverBtn = h('button',{class:'btn',type:'button',onclick:async function(){
+    try { await updateDoc(doc(fs, 'house', 'sofa'), { blanket: true }); said.textContent = CONTENT.sofa.cover; } catch(err){}
+  }},'담요 덮어주기');
   widgets.sofa = function(){
     var st = sofaState();
     if (!(canShare && fs) || S.off.sofa){
       said.textContent = CONTENT.sofa.free;
       status.textContent = '소파는 아직 준비 중이에요.';
-      form.hidden = true; upBtn.hidden = true;
+      form.hidden = true; upBtn.hidden = true; coverBtn.hidden = true;
       return;
     }
     form.hidden = !!st;
     restBtn.disabled = !N.authOk;
     upBtn.hidden = !(st && st.uid && st.uid === myUid());
+    coverBtn.hidden = !(st && !st.blanket && st.uid !== myUid() && N.authOk);
     if (st){
       var m = Math.floor(st.left/60000), sec = Math.floor((st.left%60000)/1000);
-      said.textContent = st.who + CONTENT.sofa.taken + ' (남은 시간 ' + m + ':' + (sec < 10 ? '0' : '') + sec + ')';
+      said.textContent = st.who + CONTENT.sofa.taken + ' (남은 시간 ' + m + ':' + (sec < 10 ? '0' : '') + sec + ')' + (st.blanket ? ' ' + CONTENT.sofa.blanket : '');
     } else if (!said.textContent || said.textContent === CONTENT.sofa.busy || /남은 시간/.test(said.textContent)) {
       said.textContent = CONTENT.sofa.free;
     }
@@ -1277,7 +1289,7 @@ function sofaBox(){
     if (!said.isConnected){ clearInterval(tick); return; }
     widgets.sofa && widgets.sofa();
   }, 1000);
-  return h('div',{class:'tvwrap'}, said, form, upBtn, status);
+  return h('div',{class:'tvwrap'}, said, form, upBtn, coverBtn, status);
 }
 
 /* 찬장과 싱크대: 한 문서를 모두가 같이 쓴다. 서버 규칙이 한 번에 한 칸씩만 줄고 늘게 한다 */
@@ -1310,10 +1322,26 @@ function pantryUI(){
   var said = h('p',{class:'flavor','aria-live':'polite'});
   var shelf = h('div',{class:'shelf'});
   var sinkTxt = h('p',{class:'flavor'});
-  var washBtn = h('button',{class:'btn',type:'button',onclick:async function(){
-    var ok = await pantryAct(function(d){ if (d.cups + d.bowls < 1) return null; d.cups = 0; d.bowls = 0; return d; });
-    said.textContent = ok ? C.wash : C.fail; redrawPantryText();
-  }},'설거지하기');
+  var washFill = h('span',{class:'fill','aria-hidden':'true'});
+  var washing = false;
+  var washBtn = h('button',{class:'btn wash',type:'button',onclick:async function(){
+    if (washing) return;
+    washing = true; washBtn.disabled = true;
+    var reduce = false;
+    try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){}
+    if (!reduce){
+      said.textContent = C.washing;
+      void washFill.offsetWidth;
+      washBtn.classList.add('go');
+      await new Promise(function(r){ setTimeout(r, 3000); });
+    }
+    washBtn.classList.remove('go');
+    washing = false;
+    if (!washBtn.isConnected){ return; }
+    var gone = false;
+    var ok = await pantryAct(function(d){ if (d.cups + d.bowls < 1){ gone = true; return null; } d.cups = 0; d.bowls = 0; return d; });
+    said.textContent = ok ? C.wash : (gone ? C.washGone : C.fail); redrawPantryText();
+  }}, washFill, h('span',{class:'lbl2'},'설거지하기'));
   function redrawPantryText(){ if (widgets.pantry) widgets.pantry(); }
   function sinkFull(d){ return d.cups + d.bowls >= SINK_MAX; }
   function slotEl(title, kindName, n, eatLabel, onEat, optionBtns, d){
@@ -1365,7 +1393,7 @@ function pantryUI(){
     });
     shelf.replaceChildren.apply(shelf, slots);
     sinkTxt.textContent = '컵 ' + d.cups + '개 · 그릇 ' + d.bowls + '개' + (sinkFull(d) ? ' — ' + C.full : '');
-    washBtn.disabled = d.cups + d.bowls < 1;
+    washBtn.disabled = washing || d.cups + d.bowls < 1;
   };
   widgets.pantry();
   pantryEnsure();
@@ -1623,7 +1651,7 @@ try {
   onSnapshot(doc(fs, 'house', 'sofa'), function(snap){
     if (!snap.exists()){ S.sofa = null; } else {
       var x = snap.data({ serverTimestamps: 'estimate' });
-      S.sofa = { who: x.who, uid: x.uid, start: tsMs(x.start), rel: !!x.rel };
+      S.sofa = { who: x.who, uid: x.uid, start: tsMs(x.start), rel: !!x.rel, blanket: !!x.blanket };
     }
     redraw('sofa');
   }, featureOff('sofa'));
