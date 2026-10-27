@@ -160,7 +160,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .fridge2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; width:100%}
 .fcol{display:grid; gap:4px; align-content:start; min-width:0}
 .fcap{font-size:12px; letter-spacing:.08em; color:var(--muted)}
-.vasewrap{width:100%; max-width:200px; margin:0 auto}
+.vasewrap{width:100%; max-width:240px; margin:4px auto 8px}
 .vasewrap svg{display:block; width:100%; height:auto}
 .vasewrap .stem{stroke:#4c8a5a; stroke-width:2.5; stroke-linecap:round}
 .vasewrap .flw{font-size:30px}
@@ -330,7 +330,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-12)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-13)</p>
 </main>
 
 <script type="module">
@@ -428,12 +428,44 @@ var CONTENT = {
   },
   sofa: {
     minutes: 15,
-    free: '비어 있다. 쿠션이 적당히 눌려 있다.',
-    taken: '님이 쉬고 있다.',
-    up: '일어났다. 쿠션이 천천히 부풀어 오른다.',
+    free: [
+      '비어 있다. 쿠션이 적당히 눌려 있다.',
+      '비어 있다. 쿠션 하나가 바닥에 떨어져 있다.',
+      '비어 있다. 앉았던 자국이 아직 남아 있다.',
+      '비어 있다. 팔걸이에 리모컨이 걸쳐져 있다.',
+      '비어 있다. 가죽 냄새와 희미한 위스키 향이 난다.',
+      '비어 있다. 등받이 틈새에 동전 하나가 끼어 있다.'
+    ],
+    freeSolo: [
+      '비어 있다. 한 사람이 딱 맞게 앉을 크기다.',
+      '비어 있다. 팔걸이에 책 한 권이 엎어져 있다.',
+      '비어 있다. 등받이가 높아서 앉으면 아무도 안 보일 것 같다.',
+      '비어 있다. 발받침이 살짝 나와 있다.',
+      '비어 있다. 쿠션이 한쪽으로 기울어 있다.'
+    ],
+    taken: [
+      '님이 쉬고 있다.',
+      '님이 눈을 감고 쉬고 있다.',
+      '님이 쿠션을 끌어안고 쉬고 있다.',
+      '님이 다리를 올리고 쉬고 있다.',
+      '님이 멍하니 천장을 보며 쉬고 있다.'
+    ],
+    up: [
+      '일어났다. 쿠션이 천천히 부풀어 오른다.',
+      '일어났다. 앉았던 자리에 온기가 조금 남아 있다.',
+      '기지개를 켜고 일어났다. 소파가 한숨을 쉬듯 꺼졌다 올라온다.'
+    ],
     busy: '방금 다른 누군가가 먼저 앉았다.',
-    blanket: '담요가 덮여 있다.',
-    cover: '살그머니 담요를 덮어 주었다.'
+    blanket: [
+      '담요가 덮여 있다.',
+      '담요가 어깨까지 덮여 있다.',
+      '담요 끝이 바닥에 살짝 끌린다.'
+    ],
+    cover: [
+      '살그머니 담요를 덮어 주었다.',
+      '발끝까지 담요를 잘 덮어 주었다.',
+      '조용히 담요 끝을 여며 주었다.'
+    ]
   },
   garden: {
     idle: '풀밭이 바람에 천천히 흔들린다.',
@@ -1481,9 +1513,11 @@ function sofaState(id){
   if (!d || typeof d.start !== 'number') return null;
   var left = d.start + (d.mins === 30 ? 30 : 15)*60000 - Date.now();
   if (d.rel || left <= 0) return null;
-  return { who: d.who, uid: d.uid, left: left, blanket: !!d.blanket };
+  return { who: d.who, uid: d.uid, left: left, blanket: !!d.blanket, start: d.start };
 }
+function asList(x){ return Array.isArray(x) ? x : [x]; }
 function sofaBox(id){
+  var freeLine = pick(asList(id === 'sofa' ? CONTENT.sofa.free : (CONTENT.sofa.freeSolo || CONTENT.sofa.free)));
   var said = h('p',{class:'flavor','aria-live':'polite'});
   var status = h('p',{class:'hint'});
   var nameI = h('input',{type:'text',maxlength:'12',placeholder:'이름',autocomplete:'off','aria-label':'쉴 사람 이름'});
@@ -1502,15 +1536,16 @@ function sofaBox(id){
     } catch(err){ said.textContent = CONTENT.sofa.busy; }
   }}, nameI, restBtn);
   var upBtn = h('button',{class:'btn',type:'button',onclick:async function(){
-    try { await updateDoc(doc(fs, 'house', id), { rel: true }); said.textContent = CONTENT.sofa.up; } catch(err){}
+    try { await updateDoc(doc(fs, 'house', id), { rel: true }); said.textContent = pick(asList(CONTENT.sofa.up)); } catch(err){}
   }},'일어나기');
   var coverBtn = h('button',{class:'btn',type:'button',onclick:async function(){
-    try { await updateDoc(doc(fs, 'house', id), { blanket: true }); said.textContent = CONTENT.sofa.cover; } catch(err){}
+    try { await updateDoc(doc(fs, 'house', id), { blanket: true }); said.textContent = pick(asList(CONTENT.sofa.cover)); } catch(err){}
   }},'담요 덮어주기');
+  var sawTaken = false;
   widgets[id] = function(){
     var st = sofaState(id);
     if (!(canShare && fs) || S.off[id]){
-      said.textContent = CONTENT.sofa.free;
+      said.textContent = freeLine;
       status.textContent = '소파는 아직 준비 중이에요.';
       form.hidden = true; upBtn.hidden = true; coverBtn.hidden = true;
       return;
@@ -1521,9 +1556,12 @@ function sofaBox(id){
     coverBtn.hidden = !(st && !st.blanket && st.uid !== myUid() && N.authOk);
     if (st){
       var m = Math.floor(st.left/60000), sec = Math.floor((st.left%60000)/1000);
-      said.textContent = st.who + CONTENT.sofa.taken + ' (남은 시간 ' + m + ':' + (sec < 10 ? '0' : '') + sec + ')' + (st.blanket ? ' ' + CONTENT.sofa.blanket : '');
+      var tk = asList(CONTENT.sofa.taken), bl = asList(CONTENT.sofa.blanket), sk = Math.floor(st.start / 1000);
+      said.textContent = st.who + tk[sk % tk.length] + ' (남은 시간 ' + m + ':' + (sec < 10 ? '0' : '') + sec + ')' + (st.blanket ? ' ' + bl[sk % bl.length] : '');
+      sawTaken = true;
     } else if (!said.textContent || said.textContent === CONTENT.sofa.busy || /남은 시간/.test(said.textContent)) {
-      said.textContent = CONTENT.sofa.free;
+      if (sawTaken){ freeLine = pick(asList(id === 'sofa' ? CONTENT.sofa.free : (CONTENT.sofa.freeSolo || CONTENT.sofa.free))); sawTaken = false; }
+      said.textContent = freeLine;
     }
     if (!st && status.textContent === '지금은 쉴 수 없어요.' && N.authOk) status.textContent = '';
   };
