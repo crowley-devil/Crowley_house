@@ -160,7 +160,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .fridge2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; width:100%}
 .fcol{display:grid; gap:4px; align-content:start; min-width:0}
 .fcap{font-size:12px; letter-spacing:.08em; color:var(--muted)}
-.vasewrap{width:100%; max-width:260px; margin:0 auto}
+.vasewrap{width:100%; max-width:200px; margin:0 auto}
 .vasewrap svg{display:block; width:100%; height:auto}
 .vasewrap .stem{stroke:#4c8a5a; stroke-width:2.5; stroke-linecap:round}
 .vasewrap .flw{font-size:30px}
@@ -168,6 +168,9 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .vasewrap .vrim{fill:#343c4d; stroke:#566176; stroke-width:1.2}
 .vasewrap .vshine{stroke:rgba(255,255,255,.18); stroke-width:3; stroke-linecap:round}
 .vnames{text-align:center}
+.flavor:empty{display:none}
+.pocketrow{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.subsofa{margin-top:10px; padding-top:8px; border-top:1px dashed var(--line); display:grid; gap:4px}
 .pocket{display:flex; flex-wrap:wrap; gap:6px}
 .food.vacant{display:grid; place-items:center; min-height:34px; border:1px dashed var(--line); border-radius:3px; color:var(--muted); font-size:13px}
 .mgrid{display:grid; grid-template-columns:repeat(5,minmax(0,46px)); gap:5px}
@@ -327,7 +330,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-10)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-12)</p>
 </main>
 
 <script type="module">
@@ -471,7 +474,7 @@ var CONTENT = {
     empty: '꽃병이 비어 있다.',
     by: '님이 꽂음.',
     pushed: ' 가장 오래된 꽃이 빠졌다.',
-    pocketEmpty: '주머니가 비어 있다. 뒷마당을 산책해 보세요.'
+    pocketEmpty: '비어 있다. 뒷마당을 산책해 보세요.'
   },
   pantry: {
     coffee: { coffee: '커피', cocoa: '코코아' },
@@ -881,12 +884,12 @@ function mountLiving(body){
     obj('꽃병', vaseBox()),
     obj('텔레비전', tvBox()),
     obj('책상 위 전화', phoneBox()),
-    obj('테이블', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.'), tarotBox()),
+    obj('테이블', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.'), tarotBox(),
+      h('div',{class:'subsofa'}, h('div',{class:'fcap'}, '왕좌 의자'), h('p',{class:'flavor'}, CONTENT.throne))),
     obj('마커판', markerBox()),
-    obj('소파', sofaBox('sofa')),
-    obj('1인용 소파 1', sofaBox('sofa2')),
-    obj('1인용 소파 2', sofaBox('sofa3')),
-    obj('왕좌 의자', h('p',{class:'flavor'}, CONTENT.throne))
+    obj('소파', sofaBox('sofa'),
+      h('div',{class:'subsofa'}, h('div',{class:'fcap'}, '1인용 소파 1'), sofaBox('sofa2')),
+      h('div',{class:'subsofa'}, h('div',{class:'fcap'}, '1인용 소파 2'), sofaBox('sofa3')))
   );
   armScare();
 }
@@ -1436,7 +1439,7 @@ function vaseBox(){
   widgets.vase = function(){
     var off = !(canShare && fs) || S.off.vase;
     var sl = vaseSlots();
-    var ANG = [-38, -19, 0, 19, 38], LEN = [74, 98, 112, 94, 70], cx = 120, my = 128, art = '';
+    var ANG = [-52, -26, 0, 26, 52], LEN = [40, 50, 58, 48, 38], cx = 120, my = 128, art = '';
     sl.forEach(function(x, i){
       if (!x.f) return;
       var a = ANG[i] * Math.PI / 180, tx = cx + LEN[i] * Math.sin(a), ty = my - LEN[i] * Math.cos(a);
@@ -1444,15 +1447,17 @@ function vaseBox(){
              '<text class="flw" x="' + tx.toFixed(1) + '" y="' + (ty + 10).toFixed(1) + '" text-anchor="middle">' + x.f.icon + '</text>';
     });
     var names = sl.filter(function(x){ return x.f; }).map(function(x){ return x.f.name; });
-    shelf.innerHTML = '<svg viewBox="0 -16 240 228" role="img" aria-label="' + (names.length ? '꽃병에 ' + names.join(', ') + ' 꽃이 꽂혀 있다' : '빈 꽃병') + '">' +
+    shelf.innerHTML = '<svg viewBox="0 50 240 166" role="img" aria-label="' + (names.length ? '꽃병에 ' + names.join(', ') + ' 꽃이 꽂혀 있다' : '빈 꽃병') + '">' +
       art +
       '<path class="vbody" d="M100 130 L140 130 C140 142 158 152 158 176 C158 198 142 207 120 207 C98 207 82 198 82 176 C82 152 100 142 100 130 Z"/>' +
       '<rect class="vrim" x="95" y="125" width="50" height="7" rx="2"/>' +
       '<path class="vshine" d="M96 160 C94 172 96 184 104 192" fill="none"/></svg>';
-    namesP.textContent = names.length ? names.join(' · ') : '';
+
     var last = null;
     sl.forEach(function(x){ if (x.f && (!last || x.t > last.t)) last = x; });
     lastP.textContent = last ? (last.who || '누군가') + V.by : V.empty;
+    namesP.textContent = names.length ? names.join(' · ') + ' — ' + lastP.textContent : lastP.textContent;
+    lastP.hidden = true;
     var groups = {}, order = [];
     S.pocket.forEach(function(id){ if (!groups[id]){ groups[id] = 0; order.push(id); } groups[id]++; });
     pocketEl.replaceChildren.apply(pocketEl, order.length ? order.map(function(id){
@@ -1467,7 +1472,7 @@ function vaseBox(){
     if (!shelf.isConnected){ clearInterval(tick); return; }
     widgets.vase && widgets.vase();
   }, 30000);
-  return h('div',{class:'tvwrap'}, shelf, namesP, said, lastP, h('div',{class:'fcap'}, '주머니'), pocketEl, h('div',{class:'row'}, whoI), status);
+  return h('div',{class:'tvwrap'}, shelf, namesP, said, lastP, h('div',{class:'pocketrow'}, h('span',{class:'fcap'}, '주머니'), pocketEl), h('div',{class:'row'}, whoI), status);
 }
 
 /* 소파: 15분(숨겨진 이름이면 30분) 동안 한 사람만 쉴 수 있다. 잠금은 규칙이 서버 시간으로 확인한다 */
