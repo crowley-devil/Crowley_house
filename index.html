@@ -178,6 +178,22 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .tarot-out{display:grid; gap:2px; font-family:var(--f-disp)}
 .tarot-out strong{color:var(--teal); font-weight:700}
 
+/* 이주의 객식구, 칭찬과 고발 노트 */
+.weekly{display:grid; gap:2px; margin:6px 0 10px; font-size:14px}
+.weekly b{font-weight:500}
+.weekly .good b{color:var(--teal)} .weekly .bad b{color:var(--crimson)}
+.notebox{margin:0 0 12px}
+.notepanel{margin-top:10px; border:1px dashed var(--line); padding:12px; display:grid; gap:10px; min-width:0}
+.notepanel .row{align-items:center}
+.nlist{list-style:none; margin:0; padding:0; display:grid; gap:8px}
+.nlist li{border-left:2px solid var(--line); padding-left:10px; min-width:0; display:grid; gap:4px}
+.nlist li.good{border-left-color:var(--teal)} .nlist li.bad{border-left-color:var(--crimson)}
+.ntag{font-size:12px; letter-spacing:.08em; margin-right:6px}
+.nlist .good .ntag{color:var(--teal)} .nlist .bad .ntag{color:var(--crimson)}
+.nlist .ntext{margin:0; overflow-wrap:anywhere}
+.nvote{display:flex; gap:6px; align-items:center; font-size:12px; color:var(--muted)}
+.nvote .btn{min-height:28px; padding:2px 10px; font-size:13px}
+.nvote .btn[aria-pressed="true"]{border-color:var(--teal); color:var(--teal)}
 /* 객식구 복도 */
 .corridor{margin-top:14px; border:1px solid var(--line); background:var(--room-deep); padding:14px 14px 10px; border-radius:3px}
 .corridor h2{margin:0; font-family:var(--f-disp); font-size:18px}
@@ -243,16 +259,19 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 
   <section class="corridor" aria-labelledby="hall-title">
     <h2 id="hall-title">객식구 복도</h2>
+    <div class="weekly" id="weekly" aria-live="polite"></div>
+    <div class="notebox" id="notes"></div>
     <p class="sub">밖에서 보이는 것보다 훨씬 깁니다. 쭉 살펴보세요.</p>
     <div class="hall" id="hall"></div>
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 2-4)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 3-1)</p>
 </main>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, doc, setDoc, getDocs, onSnapshot, query, where, orderBy, limit, startAfter, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* 공개용 설정값입니다. 비밀 키가 아니라서 페이지에 들어 있어도 됩니다. 안전은 Firestore 보안 규칙이 지킵니다. */
@@ -319,6 +338,15 @@ var CONTENT = {
   shoes: ['반들반들한 검은 뱀 가죽 구두','진흙 묻은 부츠','끈 풀린 운동화','슬리퍼 한 짝','처음 보는 구두','굽이 닳은 로퍼','말끔한 구두','옆면이 닳은 구두','러닝화'],
   foods: ['에그 인 헬','티라미수','딤섬','수상한 병',
     '푸아그라','트러플 리조또','캐비어 한 스푼','랍스터 테르미도르','마카롱 상자','크렘 브륄레','와규 스테이크','생굴 한 접시','연어 카나페','샴페인 한 병','에클레어','프로슈토 멜론','비프 웰링턴','밀푀유'],
+  notes: {
+    minVotes: 3,
+    title: '칭찬과 고발 노트',
+    intro: '이번 주에 있었던 일을 남겨 주세요. 매주 월요일에 새로 시작합니다.',
+    goodTitle: '이번 주 좋은 객식구',
+    badTitle: '이번 주 나쁜 객식구',
+    none: '아직 없음',
+    empty: '이번 주에는 아직 아무것도 적혀 있지 않다.'
+  },
   marker: {
     winLabel: '당첨!',
     dudLabel: '꽝.',
@@ -1037,6 +1065,140 @@ document.querySelectorAll('.room').forEach(function(el){
   $('.room-head', el).addEventListener('click', function(){ toggleRoom(el.dataset.room); });
 });
 
+/* ===== 칭찬과 고발 노트 ===== */
+var auth = null;
+var N = { notes: [], votes: [], week: '', unsubs: [], open: false, authOk: false, kind: 'good', err: '' };
+function weekKey(now){
+  var d = new Date((now == null ? Date.now() : now) + 9*3600*1000);
+  var back = (d.getUTCDay() + 6) % 7;
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - back)).toISOString().slice(0, 10);
+}
+function normName(x){ return String(x == null ? '' : x).replace(/\s+/g,' ').trim().toLowerCase(); }
+function myUid(){ return (auth && auth.currentUser) ? auth.currentUser.uid : ''; }
+function noteCounts(){
+  var c = {};
+  N.votes.forEach(function(v){
+    var x = c[v.n] || (c[v.n] = { u:0, d:0, mine:'' });
+    if (v.v === 'u') x.u++; else if (v.v === 'd') x.d++;
+    if (v.u && v.u === myUid()) x.mine = v.v;
+  });
+  return c;
+}
+function weeklyWinners(kind){
+  var cnt = noteCounts(), by = {};
+  N.notes.forEach(function(n){
+    if (n.k !== kind) return;
+    var key = normName(n.who);
+    if (!key) return;
+    var g = by[key] || (by[key] = { name: n.who, up: 0, down: 0 });
+    var c = cnt[n.id];
+    if (c){ g.up += c.u; g.down += c.d; }
+  });
+  var best = null, out = [];
+  Object.keys(by).forEach(function(k){
+    var g = by[k], score = g.up - g.down;
+    if (g.up + g.down < CONTENT.notes.minVotes || score <= 0) return;
+    if (best === null || score > best){ best = score; out = [g.name]; }
+    else if (score === best) out.push(g.name);
+  });
+  return out;
+}
+function notesReady(){ return !!(canShare && fs && !S.off.notes); }
+function notesSubscribe(){
+  if (!notesReady()) return;
+  var wk = weekKey();
+  if (wk === N.week && N.unsubs.length) return;
+  N.unsubs.forEach(function(u){ try { u(); } catch(e){} });
+  N.unsubs = []; N.week = wk; N.notes = []; N.votes = [];
+  N.unsubs.push(onSnapshot(query(collection(fs, 'notes'), where('w', '==', wk)), function(snap){
+    N.notes = snap.docs.map(function(d){
+      var x = d.data({ serverTimestamps: 'estimate' });
+      return { id: d.id, k: x.k, who: x.who, t: x.t, by: x.by, u: x.u, ts: tsMs(x.ts) };
+    }).sort(function(a, b){ return b.ts - a.ts; });
+    redraw('notes');
+  }, featureOff('notes')));
+  N.unsubs.push(onSnapshot(query(collection(fs, 'noteVotes'), where('w', '==', wk)), function(snap){
+    N.votes = snap.docs.map(function(d){ var x = d.data(); return { n: x.n, v: x.v, u: x.u }; });
+    redraw('notes');
+  }, featureOff('notes')));
+}
+async function noteVote(n, v){
+  if (!notesReady() || !N.authOk || !myUid()) return;
+  N.err = '';
+  try {
+    await setDoc(doc(fs, 'noteVotes', n.id + '_' + myUid()), { n: n.id, w: N.week, v: v, u: myUid(), ts: serverTimestamp() });
+  } catch(e){ N.err = '표를 남기지 못했어요.'; redraw('notes'); }
+}
+async function noteAdd(kind, who, t, by){
+  if (!notesReady() || !N.authOk || !myUid()) { N.err = '지금은 노트를 쓸 수 없어요.'; redraw('notes'); return false; }
+  N.err = '';
+  try {
+    await addDoc(collection(fs, 'notes'), { k: kind, who: who.slice(0, 12), t: t.slice(0, 60), by: by.slice(0, 12), w: N.week || weekKey(), u: myUid(), ts: serverTimestamp() });
+    return true;
+  } catch(e){ N.err = '노트를 남기지 못했어요.'; redraw('notes'); return false; }
+}
+function notesMount(){
+  var weeklyEl = $('#weekly'), host = $('#notes');
+  var C = CONTENT.notes;
+  var guestNames = [];
+  CONTENT.guests.forEach(function(g){ var nm = g.name.replace(/\n/g, ' '); if (guestNames.indexOf(nm) < 0) guestNames.push(nm); });
+  var kindBtns = { good: null, bad: null };
+  function setKind(k){ N.kind = k; ['good','bad'].forEach(function(x){ kindBtns[x].setAttribute('aria-pressed', x === k ? 'true' : 'false'); }); }
+  kindBtns.good = h('button',{class:'btn chip',type:'button',onclick:function(){ setKind('good'); }},'칭찬');
+  kindBtns.bad = h('button',{class:'btn chip',type:'button',onclick:function(){ setKind('bad'); }},'고발');
+  var whoI = h('input',{type:'text',maxlength:'12',placeholder:'누구에 대해서',list:'note-who-list',autocomplete:'off','aria-label':'대상 객식구'});
+  var textI = h('input',{type:'text',maxlength:'60',placeholder:'무슨 일이 있었나요',autocomplete:'off','aria-label':'있었던 일'});
+  var byI = h('input',{type:'text',maxlength:'12',placeholder:'쓴 사람 (필수)',required:true,autocomplete:'off','aria-label':'쓴 사람'});
+  var statusP = h('p',{class:'hint'});
+  var form = h('form',{class:'row',onsubmit:async function(e){
+    e.preventDefault();
+    var who = whoI.value.trim(), t = textI.value.trim(), by = byI.value.trim();
+    if (!who || !t) return;
+    if (!by){ N.err = '쓴 사람 이름을 적어 주세요.'; redraw('notes'); byI.focus(); return; }
+    var ok = await noteAdd(N.kind, who, t, by);
+    if (ok){ textI.value = ''; }
+  }}, whoI, textI, byI, h('button',{class:'btn',type:'submit'},'남기기'));
+  var formWrap = h('div',{class:'tvwrap',style:'width:100%'},
+    h('div',{class:'row'}, kindBtns.good, kindBtns.bad), form);
+  var list = h('ul',{class:'nlist'});
+  var panel = h('div',{class:'notepanel',hidden:true},
+    h('p',{class:'flavor'}, C.intro),
+    h('datalist',{id:'note-who-list'}, guestNames.map(function(n){ return h('option',{value:n}); })),
+    formWrap, statusP, list);
+  var toggle = h('button',{class:'btn',type:'button','aria-expanded':'false',onclick:function(){
+    N.open = !N.open; redraw('notes');
+  }}, C.title + ' 펼치기');
+  host.append(toggle, panel);
+  setKind('good');
+
+  widgets.notes = function(){
+    var good = weeklyWinners('good'), bad = weeklyWinners('bad');
+    weeklyEl.replaceChildren(
+      h('div',{class:'good'}, C.goodTitle + ': ', h('b',null, good.length ? good.join(', ') : C.none)),
+      h('div',{class:'bad'}, C.badTitle + ': ', h('b',null, bad.length ? bad.join(', ') : C.none))
+    );
+    toggle.textContent = C.title + (N.open ? ' 접기' : ' 펼치기');
+    toggle.setAttribute('aria-expanded', N.open ? 'true' : 'false');
+    panel.hidden = !N.open;
+    var canWrite = notesReady() && N.authOk;
+    formWrap.hidden = !canWrite;
+    statusP.textContent = N.err || (!canShare ? '지금은 노트를 읽거나 쓸 수 없어요.' : (S.off.notes ? '노트는 아직 준비 중이에요.' : (canWrite ? '' : '잠시만요, 연결하는 중이에요.')));
+    var cnt = noteCounts(), me = myUid();
+    list.replaceChildren.apply(list, N.notes.length ? N.notes.slice(0, 30).map(function(n){
+      var c = cnt[n.id] || { u: 0, d: 0, mine: '' };
+      var own = !!me && n.u === me;
+      var up = h('button',{class:'btn',type:'button','aria-pressed':c.mine === 'u' ? 'true' : 'false',disabled: own || !!c.mine || !canWrite,onclick:function(){ noteVote(n, 'u'); }}, '공감 ' + c.u);
+      var down = h('button',{class:'btn',type:'button','aria-pressed':c.mine === 'd' ? 'true' : 'false',disabled: own || !!c.mine || !canWrite,onclick:function(){ noteVote(n, 'd'); }}, '비공감 ' + c.d);
+      return h('li',{class:n.k === 'bad' ? 'bad' : 'good'},
+        h('p',{class:'ntext'}, h('span',{class:'ntag'}, n.k === 'bad' ? '고발' : '칭찬'), h('b',null, n.who), '에 대해: ' + n.t),
+        h('div',{class:'nvote'}, up, down, h('span',null, '— ' + n.by + (own ? ' (내 글)' : '')))
+      );
+    }) : [h('li',null,h('p',{class:'empty'}, C.empty))]);
+  };
+  widgets.notes();
+}
+notesMount();
+
 /* ===== 객식구 복도 ===== */
 (function(){
   var hall = $('#hall'), desc = $('#guestdesc');
@@ -1093,8 +1255,15 @@ loop(tvOn, 45, 130);
 
 /* ===== 공유 저장소 연결 ===== */
 try {
-  fs = getFirestore(initializeApp(firebaseConfig));
+  var app = initializeApp(firebaseConfig);
+  fs = getFirestore(app);
   canShare = true;
+  try {
+    auth = getAuth(app);
+    signInAnonymously(auth).then(function(){ N.authOk = true; redraw('notes'); }).catch(function(){ N.authOk = false; redraw('notes'); });
+  } catch(e){ N.authOk = false; }
+  notesSubscribe();
+  setInterval(notesSubscribe, 60000);
   onSnapshot(query(collection(fs, 'guestbook'), orderBy('ts', 'desc'), limit(9)), function(snap){
     S.guestRemote = snap.docs.map(toRow);
     redraw('guestbook');
