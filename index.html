@@ -273,6 +273,12 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .glock .row .btn{justify-self:auto}
 .guestdesc{margin:4px 0 0; min-height:3em; font-family:var(--f-disp)}
 .foot{margin:18px 0 0; font-size:12px; color:var(--muted)}
+.candytoast{
+  position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:20; margin:0;
+  max-width:min(92vw, 420px); padding:8px 14px; background:#1c1420; border:1px solid #b8742a; border-radius:4px;
+  color:#f3c98b; font-size:14px; text-align:center; box-shadow:0 8px 20px -8px rgba(0,0,0,.8);
+}
+.candytotal{margin:0; font-family:var(--f-disp); color:#f3c98b}
 
 @keyframes roll{to{background-position:0 3px}}
 @keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(-3px,2px)}50%{transform:translate(3px,-2px)}75%{transform:translate(-2px,-2px)}100%{transform:translate(0,0)}}
@@ -330,7 +336,8 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-13)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-15)</p>
+  <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
 <script type="module">
@@ -539,6 +546,43 @@ var CONTENT = {
     none: ['아무 일도 일어나지 않았다.'],
     again: '새 판이 시작됐다.',
     others: { win: '누군가 방금 당첨됐다!', dud: '누군가 방금 꽝에 걸렸다.' }
+  },
+  /* 할로윈 이벤트: 문구, 단계 숫자, 일정은 여기만 고치면 됩니다 (일정을 바꾸면 규칙의 마감 시각도 같이 바꿔야 합니다) */
+  candy: {
+    title: '할로윈 바구니',
+    closeAt: '2026-10-31T12:00:00+09:00',   /* 이 시각 이후로는 사탕을 모으거나 넣을 수 없다 (규칙의 마감과 같아야 함) */
+    endAt: '2026-11-04T00:00:00+09:00',     /* 이 시각이 지나면 앞마당의 할로윈 칸이 사라진다 (11월 3일까지 유지) */
+    pocketMax: 20,
+    laterChance: 0.25,
+    /* cap: 하루에 100%로 나오는 횟수, n: 한 번에 나오는 개수. cap을 넘긴 뒤로는 매번 laterChance 확률 */
+    actions: {
+      guest:  { cap: 1, n: 1 },
+      board:  { cap: 1, n: 1 },
+      sofa:   { cap: 1, n: 1 },
+      cereal: { cap: 1, n: 1 },
+      coffee: { cap: 1, n: 1 },
+      walk:   { cap: 3, n: 1 },
+      wash:   { cap: 1, n: 2 },
+      vote:   { cap: 2, n: 1 },
+      marker: { cap: 1, n: 3 },
+      tarot:  { cap: 1, n: 1 },
+      mood:   { cap: 1, n: 1 }
+    },
+    steps: [50, 150, 300, 450, 600],
+    decor: [
+      '앞마당 한쪽에 빈 나무 바구니가 놓여 있다. 아직 아무 장식도 없다.',
+      '현관 계단에 작은 호박등 하나가 올라와 있다. 안에서 촛불이 깜빡인다.',
+      '울타리를 따라 호박등이 줄지어 있다. 나뭇가지에는 솜으로 만든 거미줄이 걸려 있다.',
+      '해적선 돛대에 박쥐 모양 종이 장식이 매달려 있다. 벤틀리 보닛에는 누가 작은 마녀 모자를 올려 두었다.',
+      '앞마당 전체에 주황빛 전구가 둘러져 있다. 벤틀리 헤드라이트에는 호박 얼굴이 붙어 있다. 누가 붙였는지는 알 것 같다.',
+      '현관 위에 “트릭 오어 트릿”이라고 휘갈겨 쓴 현수막이 걸렸다. 사탕이 바구니 밖까지 넘치고, 어디선가 크롤리가 못마땅한 얼굴로 사탕을 세고 있는 것 같다.'
+    ],
+    stageUp: '바구니가 묵직해지더니 앞마당 분위기가 달라졌다.',
+    deposited: '사탕 {k}개를 바구니에 넣었다.',
+    pocketFull: '🍬 주머니가 가득 찼다. 앞마당 바구니에 넣고 오자.',
+    closed: '바구니는 닫혔다.',
+    notReady: '바구니는 아직 준비 중이에요.',
+    fail: '지금은 넣을 수 없어요. 잠시 후에 다시 해 주세요.'
   },
   notice: '외출 중. 돌아오는 시간은 미정.',
   ship: ['해적을 꿈꾸는 수탉의 배', '깃털이 그려진 졸리 로저가 인상적이다.', '아쉽게도 잠겨 있는 듯하다.'],
@@ -775,6 +819,7 @@ function tarotBox(){
       s = { date: todayKST(), i: Math.floor(Math.random()*CONTENT.tarot.length), rev: Math.random() < 0.5 };
       tarotMem = s;
       lsSet('crowley.tarot', s);
+      candyTry('tarot');
     }
     var c = CONTENT.tarot[s.i];
     if (c) out.replaceChildren(h('strong', null, c.name + ' · ' + (s.rev ? '역방향' : '정방향')), h('span', null, s.rev ? c.rev : c.up));
@@ -861,6 +906,7 @@ function guestbookBox(){
     if (!t) return;
     textI.value = '';
     await addGuest(nameI.value.trim(), t);
+    candyTry('guest');
     G.page = 0; G.pages = []; G.err = '';
     redraw('guestbook');
   }}, nameI, textI, h('button',{class:'btn',type:'submit'},'남기기'));
@@ -952,6 +998,7 @@ function boardBox(){
     if (!t) return;
     input.value = '';
     await addBoard(t);
+    candyTry('board');
     redraw('board');
   }}, input, h('button',{class:'btn',type:'submit'},'쓰기'));
   widgets.board = function(){
@@ -1193,6 +1240,7 @@ async function markCell(c){
     M.marks[c] = { k: k, m: m };
   }
   M.said = markerText(k, m);
+  if (k === 'win') candyTry('marker');   /* 내가 직접 누른 칸이 당첨일 때만 */
   redraw('marker');
   markerFx(k, c, M.said);
   markerCheckDone();
@@ -1315,7 +1363,7 @@ function descBox(name, text){
     said
   );
 }
-function mountFront(body){ body.append(h('div',{class:'obj'}, descBox('해적선', CONTENT.ship)), h('div',{class:'obj'}, descBox('벤틀리', CONTENT.bentley))); }
+function mountFront(body){ body.append(h('div',{class:'obj'}, descBox('해적선', CONTENT.ship)), h('div',{class:'obj'}, descBox('벤틀리', CONTENT.bentley))); mountCandy(body); }
 function mountBack(body){ body.append(h('div',{class:'obj'}, descBox('블랙 타지마할', CONTENT.taj)), obj('뒷마당 산책', walkBox())); }
 
 /* ===== 방 열고 닫기 ===== */
@@ -1325,7 +1373,7 @@ var ROOMS = {
   kitchen: { mount: mountKitchen, widgets:['board','fridge','pantry'] },
   study:   { mount: mountStudy,   widgets:['knock'] },
   util:    { mount: mountUtil,    widgets:[] },
-  front:   { mount: mountFront,   widgets:[] },
+  front:   { mount: mountFront,   widgets:['candy'] },
   back:    { mount: mountBack,    widgets:['walk'] }
 };
 var openRoom = null;
@@ -1368,6 +1416,92 @@ function bump(docName, field, n){
   setDoc(doc(fs, 'house', docName), patch, { merge: true }).catch(function(){ S.off[docName] = true; redrawAll(); });
 }
 
+/* ===== 할로윈 사탕 이벤트 =====
+   사탕은 행동마다 하루 정해진 횟수(cap)까지는 100%로 나오고, 그 이후로는 횟수 제한 없이 매번 25%로 나온다.
+   주머니는 이 브라우저에만 저장되고, 앞마당 바구니에 넣으면 모두의 합계(house/candy)가 올라간다. */
+S.candy = null;
+var CS = (function(){
+  var d = lsGet('crowley.candy', null);
+  if (!d || typeof d !== 'object') d = {};
+  return { day: typeof d.day === 'string' ? d.day : '', used: (d.used && typeof d.used === 'object') ? d.used : {}, pocket: Math.max(0, Math.min(CONTENT.candy.pocketMax, Math.floor(Number(d.pocket) || 0))) };
+})();
+function candySave(){ lsSet('crowley.candy', { day: CS.day, used: CS.used, pocket: CS.pocket }); }
+function candyOpen(){ return Date.now() < Date.parse(CONTENT.candy.closeAt); }
+function candyShown(){ return Date.now() < Date.parse(CONTENT.candy.endAt); }
+function candyStage(){
+  var n = (S.candy && typeof S.candy.n === 'number') ? S.candy.n : 0, st = 0;
+  CONTENT.candy.steps.forEach(function(v, i){ if (n >= v) st = i + 1; });
+  return st;
+}
+var candyToastT = null;
+function candyToast(text){
+  var el = $('#candytoast');
+  if (!el) return;
+  el.textContent = text; el.hidden = false;
+  clearTimeout(candyToastT);
+  candyToastT = setTimeout(function(){ el.hidden = true; }, 4500);
+}
+/* 사탕 행동 하나가 끝났을 때 부른다. 얻었으면 true */
+function candyTry(key){
+  var C = CONTENT.candy, rule = C.actions[key];
+  if (!rule || !candyOpen()) return false;
+  var today = todayKST();
+  if (CS.day !== today){ CS.day = today; CS.used = {}; }
+  var used = CS.used[key] || 0;
+  if (CS.pocket >= C.pocketMax){ candyToast(C.pocketFull); return false; }
+  CS.used[key] = used + 1;
+  var got = (used < rule.cap || Math.random() < C.laterChance) ? Math.min(rule.n, C.pocketMax - CS.pocket) : 0;
+  CS.pocket += got;
+  candySave();
+  if (got > 0) candyToast('🍬 사탕 ' + got + '개를 얻었다. (주머니 ' + CS.pocket + '/' + C.pocketMax + ')');
+  redraw('candy');
+  return got > 0;
+}
+var candyBusy = false;
+async function candyDeposit(say){
+  var C = CONTENT.candy;
+  if (candyBusy || CS.pocket < 1) return;
+  if (!candyOpen()){ say(C.closed); return; }
+  if (!(canShare && fs) || S.off.candy){ say(C.notReady); return; }
+  var k = Math.min(CS.pocket, 20);
+  candyBusy = true; CS.pocket -= k; candySave(); redraw('candy');
+  try {
+    await setDoc(doc(fs, 'house', 'candy'), { n: increment(k) }, { merge: true });
+    say(C.deposited.replace('{k}', String(k)));
+  } catch(e){
+    CS.pocket += k; candySave();
+    say(C.fail);
+  }
+  candyBusy = false;
+  redraw('candy');
+}
+function candyBox(){
+  var C = CONTENT.candy;
+  var said = h('p',{class:'flavor','aria-live':'polite'});
+  var total = h('p',{class:'candytotal'});
+  var pocket = h('p',{class:'hint'});
+  var decor = h('p',{class:'flavor'});
+  var btn = h('button',{class:'btn',type:'button',onclick:function(){ candyDeposit(function(t){ said.textContent = t; }); }}, '사탕 바구니에 넣기');
+  var lastStage = -1;
+  widgets.candy = function(){
+    var off = !(canShare && fs) || S.off.candy;
+    var n = (S.candy && typeof S.candy.n === 'number') ? S.candy.n : 0;
+    var st = candyStage();
+    total.textContent = off ? C.notReady : '지금까지 모인 사탕 ' + n + '개 · 다음 장식까지 ' + (st < C.steps.length ? (C.steps[st] - n) + '개' : '모두 모였다');
+    decor.textContent = C.decor[st];
+    if (lastStage >= 0 && st > lastStage) said.textContent = C.stageUp;
+    lastStage = st;
+    pocket.textContent = '주머니 사탕 ' + CS.pocket + '/' + C.pocketMax + (candyOpen() ? '' : ' · ' + C.closed);
+    btn.disabled = off || CS.pocket < 1 || !candyOpen();
+  };
+  widgets.candy();
+  return h('div',{class:'tvwrap',style:'width:100%'}, decor, total, pocket, btn, said);
+}
+function mountCandy(body){
+  if (!candyShown()) return;
+  body.append(obj(CONTENT.candy.title, candyBox()));
+}
+
 /* 뒷마당 산책, 주머니, 거실 꽃병 */
 function flowerById(id){
   var l = CONTENT.garden.flowers;
@@ -1401,6 +1535,7 @@ function walkBox(){
     at0 = Date.now(); lsSet('crowley.walkAt', at0);
     setTimeout(function(){
       walking = false;
+      candyTry('walk');
       if (!btn.isConnected) return;
       var roll = Math.random();
       if (roll < G.noneChance){ said.textContent = pick(G.none); }
@@ -1533,6 +1668,7 @@ function sofaBox(id){
     try {
       await setDoc(doc(fs, 'house', id), { who: who.slice(0, 12), uid: myUid(), start: serverTimestamp(), rel: false, blanket: false, mins: mins });
       nameI.value = '';
+      candyTry('sofa');
     } catch(err){ said.textContent = CONTENT.sofa.busy; }
   }}, nameI, restBtn);
   var upBtn = h('button',{class:'btn',type:'button',onclick:async function(){
@@ -1622,6 +1758,7 @@ function pantryUI(){
     var gone = false;
     var ok = await pantryAct(function(d){ if (d.cups + d.bowls < 1){ gone = true; return null; } d.cups = 0; d.bowls = 0; return d; });
     said.textContent = ok ? C.wash : (gone ? C.washGone : C.fail); redrawPantryText();
+    if (ok) candyTry('wash');
   }}, washFill, h('span',{class:'lbl2'},'설거지하기'));
   function redrawPantryText(){ if (widgets.pantry) widgets.pantry(); }
   function sinkFull(d){ return d.cups + d.bowls >= SINK_MAX; }
@@ -1641,10 +1778,12 @@ function pantryUI(){
     var kind = '';
     var ok = await pantryAct(function(d){ if (d.cn < 1 || sinkFull(d)) return null; kind = d.ck; d.cn--; d.cups++; return d; });
     said.textContent = ok ? pick(C.eat[kind === 'cocoa' ? 'cocoa' : 'coffee']) : C.fail; redrawPantryText();
+    if (ok) candyTry('coffee');
   }
   async function eatCereal(i){
     var ok = await pantryAct(function(d){ if (d['s'+i+'n'] < 1 || sinkFull(d)) return null; d['s'+i+'n']--; d.bowls++; return d; });
     said.textContent = ok ? pick(C.eat.cereal) : C.fail; redrawPantryText();
+    if (ok) candyTry('cereal');
   }
   async function refillCoffee(kind){
     var ok = await pantryAct(function(d){ if (d.cn !== 0) return null; d.ck = kind; d.cn = PANTRY_N; return d; });
@@ -1701,7 +1840,7 @@ function moodBox(){
     var cur = moodNow();
     var next = cur ? (cur.k + 1) % CONTENT.mood.length : 0;
     gear.classList.toggle('spin');
-    try { await setDoc(doc(fs, 'house', 'mood'), { k: next, who: nameI.value.trim().slice(0, 12), ts: serverTimestamp() }); }
+    try { await setDoc(doc(fs, 'house', 'mood'), { k: next, who: nameI.value.trim().slice(0, 12), ts: serverTimestamp() }); candyTry('mood'); }
     catch(e){ whoEl.textContent = '지금은 돌릴 수 없어요.'; }
   }},'⚙️');
   widgets.mood = function(){
@@ -1780,6 +1919,7 @@ async function noteVote(n, v){
   N.err = '';
   try {
     await setDoc(doc(fs, 'noteVotes', n.id + '_' + myUid()), { n: n.id, w: N.week, v: v, u: myUid(), ts: serverTimestamp() });
+    candyTry('vote');
   } catch(e){ N.err = '표를 남기지 못했어요.'; redraw('notes'); }
 }
 async function noteAdd(kind, who, t, by){
@@ -2120,6 +2260,7 @@ try {
     }
     redraw('mood');
   }, featureOff('mood'));
+  onSnapshot(doc(fs, 'house', 'candy'), function(snap){ S.candy = snap.exists() ? snap.data() : null; redraw('candy'); }, featureOff('candy'));
   onSnapshot(doc(fs, 'house', 'knock'), function(snap){ S.knock = snap.exists() ? snap.data() : null; redraw('knock'); }, featureOff('knock'));
   onSnapshot(doc(fs, 'house', 'fridgeStats'), function(snap){ S.fridgeStats = snap.exists() ? snap.data() : null; redraw('fridge'); }, featureOff('fridgeStats'));
 } catch(e){ canShare = false; }
