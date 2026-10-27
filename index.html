@@ -48,18 +48,26 @@ button{font:inherit; color:inherit}
   .plan{grid-template-columns:minmax(0,1fr); grid-template-areas:"front" "entry" "living" "kitchen" "study" "util" "back"}
 }
 @media (min-width:761px){
-  .plan{grid-template-areas:none; grid-auto-flow:row dense}
-  .plan > .room{grid-row:auto !important; grid-column:span 1 !important}
-  .plan > .room[data-room="entry"]{grid-column:span 2 !important}
-  .plan > .room[data-open="true"][data-room="entry"],
+  .plan{grid-template-areas:none; align-items:start}
+  .plan > .room{grid-row:auto !important; grid-column:auto / span 1 !important}
+  .plan > .room[data-room="front"], .plan > .room[data-room="study"], .plan > .room[data-room="util"]{grid-column:1 / span 1 !important}
+  .plan > .room[data-room="entry"]{grid-column:2 / span 2 !important}
   .plan > .room[data-open="true"][data-room="living"],
   .plan > .room[data-open="true"][data-room="kitchen"]{grid-column:1 / -1 !important}
-  .room[data-open="true"][data-room="entry"] .room-body,
-  .room[data-open="true"][data-room="living"] .room-body,
-  .room[data-open="true"][data-room="kitchen"] .room-body{
+  .room[data-open="true"][data-room="living"] .room-body{
     display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); align-content:start}
+  .room[data-open="true"][data-room="kitchen"] .room-body{
+    display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); align-content:start}
+  .room[data-open="true"][data-room="entry"] .room-body{
+    display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.7fr); align-content:start}
+  .room[data-open="true"][data-room="kitchen"] .room-body > :nth-child(1){grid-column:1; grid-row:1}
+  .room[data-open="true"][data-room="kitchen"] .room-body > :nth-child(2){grid-column:2; grid-row:1}
+  .room[data-open="true"][data-room="kitchen"] .room-body > :nth-child(3){grid-column:1; grid-row:2}
+  .room[data-open="true"][data-room="kitchen"] .room-body > :nth-child(4){grid-column:2; grid-row:2}
+  .room[data-open="true"][data-room="entry"] .room-body > :nth-child(1){grid-column:1; grid-row:1}
+  .room[data-open="true"][data-room="entry"] .room-body > :nth-child(2){grid-column:1; grid-row:2}
+  .room[data-open="true"][data-room="entry"] .room-body > :nth-child(3){grid-column:2; grid-row:1 / span 2; border-left:1px dashed var(--line)}
   .room[data-open="true"] .room-body > .obj{min-width:0; align-content:start}
-  .whiteboard ul{grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:18px}
 }
 .room{
   position:relative; background:var(--room); border:1px solid var(--line); border-left:3px solid #6b2a37; border-radius:3px;
@@ -240,7 +248,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 2-3)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 2-4)</p>
 </main>
 
 <script type="module">
@@ -571,7 +579,7 @@ function guestPage(){
   var rows = S.guestRemote.slice();
   S.guestLocal.forEach(function(e){ rows.push({ n:e.n, t:e.t, ts:e.ts, local:true }); });
   rows.sort(function(a,b){ return b.ts - a.ts; });
-  return { rows: rows.slice(0, 10), more: rows.length > 10 };
+  return { rows: rows.slice(0, 8), more: rows.length > 8 };
 }
 async function guestOlder(){
   var cur = guestPage();
@@ -582,9 +590,9 @@ async function guestOlder(){
     cur.rows.forEach(function(r){ if (r._doc) last = r._doc; });
     if (!last) return;
     try {
-      var snap = await getDocs(query(collection(fs, 'guestbook'), orderBy('ts', 'desc'), startAfter(last), limit(11)));
+      var snap = await getDocs(query(collection(fs, 'guestbook'), orderBy('ts', 'desc'), startAfter(last), limit(9)));
       var rows = snap.docs.map(toRow);
-      next = { rows: rows.slice(0, 10), more: rows.length > 10 };
+      next = { rows: rows.slice(0, 8), more: rows.length > 8 };
       G.pages[G.page + 1] = next;
     } catch(e){
       G.err = '이전 글을 불러오지 못했어요.';
@@ -607,7 +615,7 @@ async function addGuest(n, t){
     try { await addDoc(collection(fs, 'guestbook'), { n: name, t: t.slice(0, 60), ts: serverTimestamp() }); return; }
     catch(e){ shareFailed(); }
   }
-  S.guestLocal = S.guestLocal.concat([{ n: name, t: t, ts: Date.now() }]).slice(-10);
+  S.guestLocal = S.guestLocal.concat([{ n: name, t: t, ts: Date.now() }]).slice(-8);
   lsSet('crowley.guest', S.guestLocal);
 }
 
@@ -666,9 +674,9 @@ function shoesNow(){
 }
 function mountEntry(body){
   body.append(
-    obj('방명록', guestbookBox()),
     obj('문 앞 메모', doorBox()),
-    obj('현관 신발', h('p',{class:'flavor'}, shoesNow().join(', ') + '.'))
+    obj('현관 신발', h('p',{class:'flavor'}, shoesNow().join(', ') + '.')),
+    obj('방명록', guestbookBox())
   );
 }
 
@@ -1087,7 +1095,7 @@ loop(tvOn, 45, 130);
 try {
   fs = getFirestore(initializeApp(firebaseConfig));
   canShare = true;
-  onSnapshot(query(collection(fs, 'guestbook'), orderBy('ts', 'desc'), limit(11)), function(snap){
+  onSnapshot(query(collection(fs, 'guestbook'), orderBy('ts', 'desc'), limit(9)), function(snap){
     S.guestRemote = snap.docs.map(toRow);
     redraw('guestbook');
   }, shareFailed);
