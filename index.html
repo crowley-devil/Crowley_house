@@ -45,7 +45,7 @@ button{font:inherit; color:inherit}
   grid-template-areas:"front entry entry" "study living kitchen" "util back ."; align-items:start;
 }
 @media (max-width:760px){
-  .plan{grid-template-columns:minmax(0,1fr); grid-template-areas:"entry" "front" "living" "kitchen" "study" "util" "back"}
+  .plan{grid-template-columns:minmax(0,1fr); grid-template-areas:"front" "entry" "living" "kitchen" "study" "util" "back"}
 }
 .room{
   position:relative; background:var(--room); border:1px solid var(--line); border-left:3px solid #6b2a37; border-radius:3px;
@@ -132,15 +132,13 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .foods{display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:6px}
 .food{text-align:center; padding:8px 6px; background:var(--room-deep); overflow-wrap:anywhere}
 
-.doors{display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap}
-.graydoor,.odd{position:relative; width:88px; height:140px; padding:0; cursor:pointer; border-radius:2px}
-.graydoor{background:#6d737b; border:1px solid #868d96; box-shadow:inset 0 0 0 6px rgba(0,0,0,.18)}
-.graydoor.open{background:#242930; border-color:#39414b; cursor:default}
-.odd{background:#1a1316; border:1px solid #4a2630; box-shadow:inset 0 0 0 6px rgba(0,0,0,.35), 0 10px 16px -10px var(--teal)}
-.graydoor::after,.odd::after{content:""; position:absolute; right:12px; top:68px; width:7px; height:7px; border-radius:50%; background:#aab1b9}
-.odd::after{background:#7a3a47}
-.graydoor.open::after{background:#4a525c}
-.graydoor.shake{animation:shake .18s linear}
+.odd{
+  position:relative; width:100%; height:100%; padding:0; cursor:pointer; border-radius:2px;
+  background:#1a1316; border:1px solid #4a2630; box-shadow:inset 0 0 0 6px rgba(0,0,0,.35), 0 10px 16px -10px var(--teal);
+}
+.odd::after{content:""; position:absolute; right:10px; top:58px; width:7px; height:7px; border-radius:50%; background:#7a3a47}
+.doorway{width:96px; height:140px; padding:8px; background:#6d737b; border:1px solid #868d96; box-shadow:inset 0 0 0 4px rgba(0,0,0,.18)}
+.shake{animation:shake .18s linear}
 .utilgrid{display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end}
 .uitem{min-height:56px; padding:8px 12px; background:var(--room-deep)}
 .tarot-out{display:grid; gap:2px; font-family:var(--f-disp)}
@@ -168,7 +166,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 @media (prefers-reduced-motion:reduce){
   .tv.on::before,.tv.scare,.room[data-tv] .rn::after{animation:none}
   .leak{transition:none}
-  .graydoor.shake{animation:none}
+  .shake{animation:none}
 }
 </style>
 
@@ -177,13 +175,13 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
   <p class="lede">초인종은 누를 필요 없습니다. 방을 눌러서 들어와 보세요. 잠기지 않은 부분은 편하게 구경하셔도 됩니다.</p>
 
   <div class="plan" id="plan">
-    <section class="room" data-room="entry" style="grid-area:entry">
-      <button class="room-head" type="button" aria-expanded="false" aria-controls="b-entry"><span class="rn">현관</span><span class="rh">들어가기</span></button>
-      <div class="room-body" id="b-entry" hidden></div>
-    </section>
     <section class="room" data-room="front" style="grid-area:front">
       <button class="room-head" type="button" aria-expanded="false" aria-controls="b-front"><span class="rn">앞마당</span><span class="rh">나가기</span></button>
       <div class="room-body" id="b-front" hidden></div>
+    </section>
+    <section class="room" data-room="entry" style="grid-area:entry">
+      <button class="room-head" type="button" aria-expanded="false" aria-controls="b-entry"><span class="rn">현관</span><span class="rh">들어가기</span></button>
+      <div class="room-body" id="b-entry" hidden></div>
     </section>
     <section class="room" data-room="study" style="grid-area:study">
       <button class="room-head" type="button" aria-expanded="false" aria-controls="b-study"><span class="rn">서재</span><span class="rh">잠겨 있음</span></button>
@@ -296,11 +294,16 @@ var CONTENT = {
     '가정집에 있기엔 지나치게 성능이 좋다.'
   ],
   utilItems: [
-    {name:'세탁기', lines:['탈수 중이다. 아무도 돌린 기억이 없다.', '안에 검은 옷만 들어 있다.']},
-    {name:'건조대', lines:['검은 셔츠가 줄지어 널려 있다. 전부 다림질이 되어 있다.']},
+    {name:'세탁기', lines:['코드가 뽑혀 있다. “객식구들 자유 사용 가능”이라고 적혀 있다.']},
+    {name:'건조기', lines:['코드가 뽑혀 있다. “객식구들 자유 사용 가능”이라고 적혀 있다.']},
     {name:'청소도구함', lines:['걸레와 빗자루가 들어 있다. 빗자루는 한 번도 쓴 적 없어 보인다.']},
     {name:'분리수거함', lines:['빈 와인병이 유독 많다.']}
   ],
+  utilDoor: {
+    label: '문',
+    lines: ['잠겨 있다.', '손잡이가 돌아가지 않는다.'],
+    opened: '안쪽에 문이 하나 더 있다. 잠겨 있다.'
+  },
   tarot: [
     {name:'바보', up:'가볍게 한 발 내딛기 좋은 날. 계획은 가는 길에 생긴다.', rev:'너무 서두르면 발밑이 비어 있을 수 있다. 한 번만 아래를 보자.'},
     {name:'마법사', up:'가진 재료만으로 충분하다. 오늘은 손이 말을 잘 듣는다.', rev:'재주를 부리려다 꼬일 수 있다. 설명을 한 번 더 하자.'},
@@ -721,28 +724,39 @@ function mountUtil(body){
   var said = h('p',{class:'flavor','aria-live':'polite'});
   function draw(refocus){
     grid.replaceChildren();
-    var gd = h('button',{class:'graydoor' + (lab.open ? ' open' : ''),type:'button','aria-label':'회색 문',onclick:function(){
-      if (lab.open) return;
-      lab.clicks++;
-      if (lab.clicks >= 5){ lab.open = true; draw(true); return; }
-      gd.classList.remove('shake'); void gd.offsetWidth; gd.classList.add('shake');
-    }});
-    var odd = lab.open ? h('button',{class:'odd',type:'button','aria-label':'잠긴 수상한 문',onclick:function(){ said.textContent = pick(CONTENT.labInner); }}) : null;
+    var door;
+    if (lab.open){
+      door = h('div',{class:'doorway'},
+        h('button',{class:'odd',type:'button','aria-label':'잠긴 문',onclick:function(){ said.textContent = pick(CONTENT.labInner); }}));
+    } else {
+      door = h('button',{class:'btn uitem',type:'button',onclick:function(){
+        lab.clicks++;
+        if (lab.clicks >= 5){ lab.open = true; said.textContent = CONTENT.utilDoor.opened; draw(true); return; }
+        said.textContent = pick(CONTENT.utilDoor.lines);
+        door.classList.remove('shake'); void door.offsetWidth; door.classList.add('shake');
+      }}, CONTENT.utilDoor.label);
+    }
+    /* 문은 다른 물건들과 같은 박스로 섞어 둔다 */
     var nodes = CONTENT.utilItems.map(function(it){
       return h('button',{class:'btn uitem',type:'button',onclick:function(){ said.textContent = pick(it.lines); }}, it.name);
     });
-    /* 회색 문은 물건들 사이에 섞어 둔다 */
-    nodes.splice(Math.min(2, nodes.length), 0, gd);
-    if (odd) nodes.splice(nodes.indexOf(gd) + 1, 0, odd);
+    nodes.splice(Math.min(2, nodes.length), 0, door);
     grid.append.apply(grid, nodes);
-    if (refocus){ var f = odd || gd; f.focus(); }
+    if (refocus){ (door.querySelector('.odd') || door).focus(); }
   }
   draw(false);
   body.append(h('div',{class:'obj'}, grid, said));
 }
 
-function mountFront(body){ body.append(obj('해적선', h('p',{class:'flavor'}, CONTENT.ship))); }
-function mountBack(body){ body.append(obj('블랙 타지마할', h('p',{class:'flavor'}, CONTENT.taj))); }
+function descBox(name, text){
+  var said = h('p',{class:'flavor','aria-live':'polite'});
+  return h('div',{class:'tvwrap'},
+    h('button',{class:'btn uitem',type:'button',onclick:function(){ said.textContent = text; }}, name),
+    said
+  );
+}
+function mountFront(body){ body.append(h('div',{class:'obj'}, descBox('해적선', CONTENT.ship))); }
+function mountBack(body){ body.append(h('div',{class:'obj'}, descBox('블랙 타지마할', CONTENT.taj))); }
 
 /* ===== 방 열고 닫기 ===== */
 var ROOMS = {
