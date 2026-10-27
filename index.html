@@ -239,6 +239,15 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .door:hover{border-color:var(--teal)}
 .door[aria-pressed="true"]{border-color:var(--teal); box-shadow:inset 0 0 0 5px rgba(0,0,0,.22), 0 0 0 2px var(--teal)}
 .plate{white-space:pre-line; background:rgba(0,0,0,.45); font-size:12px; padding:2px 8px; border-radius:2px; overflow-wrap:anywhere}
+.glock{margin:6px 0 0; display:grid; gap:6px}
+.glock .gpanel input[type=text]{max-width:300px}
+.swatches{display:flex; flex-wrap:wrap; gap:6px}
+.swatch{width:26px; height:26px; border-radius:3px; border:2px solid transparent; padding:0; cursor:pointer}
+.swatch[aria-pressed="true"]{border-color:#fff}
+.glock .gstate{font-size:12px; color:var(--muted); margin:0}
+.glock .gpanel{display:grid; gap:6px; border:1px dashed var(--line); padding:8px}
+.glock .btn{min-height:28px; padding:2px 10px; font-size:13px; justify-self:start}
+.glock .row .btn{justify-self:auto}
 .guestdesc{margin:4px 0 0; min-height:3em; font-family:var(--f-disp)}
 .foot{margin:18px 0 0; font-size:12px; color:var(--muted)}
 
@@ -298,7 +307,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 5-1)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 6-1)</p>
 </main>
 
 <script type="module">
@@ -389,6 +398,10 @@ var CONTENT = {
     badTitle: '이번 주 나쁜 객식구',
     none: '아직 없음',
     empty: '이번 주에는 아직 아무것도 적혀 있지 않다.'
+  },
+  guestLock: {
+    /* 마스터키는 코드에 암호화된 값으로만 들어 있다. 바꾸려면 새 번호를 알려 달라고 해서 이 값을 다시 만들면 된다 */
+    masterHash: 'd2db8b7eb44679d81339874a953726995624bf5274a283e0118bb8bcefa44e8b'
   },
   sofa: {
     minutes: 15,
@@ -1574,13 +1587,159 @@ notesMount();
 /* ===== 객식구 복도 ===== */
 (function(){
   var hall = $('#hall'), desc = $('#guestdesc');
-  var doors = CONTENT.guests.map(function(g){
-    var b = h('button',{class:'door',type:'button','aria-pressed':'false','aria-label':g.name.replace(/\n/g,' ') + ' 방 문',style:'--dc:' + g.color},
-      h('span',{class:'plate'}, g.name));
+  var cur = null;                      // { g, id }
+  var gl = { open: false, clicks: [], armed: false, armT: null, fails: 0, until: 0, unlocked: false, msg: '' };
+  S.rooms = {};
+  function roomRec(id){ return S.rooms[id] || null; }
+  async function sha(text){
+    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ('0' + b.toString(16)).slice(-2); }).join('');
+  }
+  function roomsOk(){ return !!(canShare && fs && !S.off.rooms && window.crypto && crypto.subtle); }
+  async function writeRoom(id, data){
+    try {
+      await setDoc(doc(fs, 'guestRooms', id), { st: data.st, pin: data.pin, desc: data.desc, name: data.name || '', color: data.color || '', ts: serverTimestamp() });
+      return true;
+    } catch(e){ gl.msg = '지금은 할 수 없어요.'; return false; }
+  }
+
+  function keep(rec, over){
+    var o = { st: 'set', pin: (rec && rec.pin) || '', desc: (rec && rec.desc) || '', name: (rec && rec.name) || '', color: (rec && rec.color) || '' };
+    for (var k in over) o[k] = over[k];
+    return o;
+  }
+  var PALETTE = ['#3b4a63','#4b3b63','#3b6358','#63503b','#633b4a','#3b5263','#4a633b','#63603b','#533b63','#3b5f63','#63453b','#4f633b','#3b4663','#633b59','#3b635a','#5a3b63','#5b4a3f','#2f2f36','#6b2a37','#2a5a6b'];
+  var pickColor = '';
+  var swatchEls = PALETTE.map(function(c){
+    var b = h('button',{class:'swatch',type:'button',style:'background:' + c,'aria-label':'문 색 ' + c,'aria-pressed':'false',onclick:function(){ pickColor = c; paintSwatches(); }});
+    b.dataset.c = c; return b;
+  });
+  function paintSwatches(){ swatchEls.forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.c === pickColor ? 'true' : 'false'); }); }
+  var nameI = h('input',{type:'text',maxlength:'16',autocomplete:'off',placeholder:'문패 이름 (줄바꿈은 /)','aria-label':'문패 이름'});
+  var pinI = h('input',{type:'text',inputmode:'numeric',maxlength:'12',autocomplete:'off',placeholder:'번호','aria-label':'번호'});
+  var okBtn = h('button',{class:'btn',type:'submit'},'확인');
+  var pinForm = h('form',{class:'row',onsubmit:function(e){ e.preventDefault(); submitCode(); }}, pinI, okBtn);
+  var descI = h('input',{type:'text',maxlength:'60',autocomplete:'off',placeholder:'방 설명 (비우면 원래 설명)','aria-label':'방 설명'});
+  var saveBtn = h('button',{class:'btn',type:'button',onclick:async function(){
+    var rec = roomRec(cur.id); if (!rec || rec.st !== 'set') return;
+    var ok = await writeRoom(cur.id, keep(rec, { desc: descI.value.trim().slice(0, 60), name: nameI.value.trim().slice(0, 16), color: pickColor }));
+    if (ok) gl.msg = '저장했어요.';
+    render();
+  }},'저장');
+  var newPinI = h('input',{type:'text',inputmode:'numeric',maxlength:'4',autocomplete:'off',placeholder:'새 번호 4자리','aria-label':'새 번호'});
+  var changeBtn = h('button',{class:'btn',type:'button',onclick:async function(){
+    var rec = roomRec(cur.id); if (!rec || rec.st !== 'set') return;
+    var v = newPinI.value.trim();
+    if (!/^\d{4}$/.test(v)){ gl.msg = '번호는 숫자 네 자리예요.'; render(); return; }
+    var ok = await writeRoom(cur.id, keep(rec, { pin: await sha(cur.id + ':' + v) }));
+    if (ok){ gl.msg = '번호를 바꿨어요.'; newPinI.value = ''; }
+    render();
+  }},'번호 바꾸기');
+  var editBox = h('div',{class:'tvwrap'}, h('div',{class:'row'}, descI), h('div',{class:'row'}, nameI), h('div',{class:'swatches'}, swatchEls), h('div',{class:'row'}, saveBtn), h('div',{class:'row'}, newPinI, changeBtn));
+  var msgP = h('p',{class:'gstate','aria-live':'polite'});
+  var closeBtn = h('button',{class:'btn',type:'button',onclick:function(){ resetLock(); render(); }},'닫기');
+  var panel = h('div',{class:'gpanel'}, pinForm, editBox, msgP, closeBtn);
+  var stateP = h('p',{class:'gstate'});
+  var enterBtn = h('button',{class:'btn',type:'button',onclick:onEnter},'입력하기');
+  var lockEl = h('div',{class:'glock',hidden:true}, stateP, enterBtn, panel);
+  desc.after(lockEl);
+
+  function resetLock(){
+    gl.open = false; gl.unlocked = false; gl.armed = false; gl.clicks = []; gl.msg = '';
+    clearTimeout(gl.armT); pinI.value = ''; newPinI.value = '';
+  }
+  /* 입력하기를 5초 안에 세 번 누르면 마스터 모드가 잠깐 켜진다 */
+  function onEnter(){
+    var now = Date.now();
+    gl.clicks = gl.clicks.filter(function(t){ return now - t <= 5000; });
+    gl.clicks.push(now);
+    gl.open = true;
+    if (gl.clicks.length >= 3){
+      gl.armed = true; gl.clicks = [];
+      clearTimeout(gl.armT);
+      gl.armT = setTimeout(function(){ gl.armed = false; }, 30000);
+    }
+    render();
+    pinI.focus();
+  }
+  async function submitCode(){
+    if (!cur || !roomsOk()) return;
+    var code = pinI.value.trim(); pinI.value = '';
+    if (!code) return;
+    var id = cur.id, rec = roomRec(id), st = rec ? rec.st : '';
+    if (gl.armed){
+      gl.armed = false; clearTimeout(gl.armT);
+      var mh = CONTENT.guestLock && CONTENT.guestLock.masterHash;
+      if (mh && await sha('master:' + code) === mh){
+        gl.unlocked = false;
+        if (st === 'set'){ if (await writeRoom(id, keep(rec, { st: 'open', pin: '' }))) gl.msg = '번호를 지웠다.'; }
+        else if (st === 'open'){ gl.msg = '이미 열려 있다.'; }
+        else { if (await writeRoom(id, keep(null, { st: 'open', pin: '' }))) gl.msg = '방을 열어 두었다.'; }
+        render(); return;
+      }
+    }
+    if (Date.now() < gl.until){ gl.msg = '잠시 후에 다시 눌러 주세요.'; render(); return; }
+    if (st === 'open'){
+      if (!/^\d{4}$/.test(code)){ gl.msg = '번호는 숫자 네 자리예요.'; render(); return; }
+      if (await writeRoom(id, keep(rec, { st: 'set', pin: await sha(id + ':' + code) }))){
+        gl.unlocked = true; gl.msg = '번호를 정했어요. 이제 설명을 바꿀 수 있어요.';
+      }
+    } else if (st === 'set'){
+      if (await sha(id + ':' + code) === rec.pin){ gl.unlocked = true; gl.fails = 0; gl.msg = ''; }
+      else {
+        gl.fails++;
+        if (gl.fails >= 5){ gl.until = Date.now() + 30000; gl.fails = 0; gl.msg = '잠시 후에 다시 눌러 주세요.'; }
+        else gl.msg = '번호가 맞지 않아요.';
+      }
+    } else {
+      gl.msg = '잠겨 있는 방이에요.';
+    }
+    render();
+  }
+  function shownDesc(){
+    if (!cur) return null;
+    var rec = roomRec(cur.id);
+    return (rec && rec.desc) ? rec.desc : cur.g.desc;
+  }
+  var doorMeta = {};
+  function applyDoors(){
+    Object.keys(doorMeta).forEach(function(id){
+      var m = doorMeta[id], rec = roomRec(id);
+      var nm = (rec && rec.name) ? rec.name.replace(/\//g, '\n') : m.g.name;
+      if (m.plate.textContent !== nm) m.plate.textContent = nm;
+      m.btn.style.setProperty('--dc', (rec && rec.color) ? rec.color : m.g.color);
+      m.btn.setAttribute('aria-label', nm.replace(/\n/g, ' ') + ' 방 문');
+    });
+  }
+  function render(){
+    applyDoors();
+    if (!cur){ lockEl.hidden = true; return; }
+    desc.textContent = shownDesc();
+    if (!roomsOk()){ lockEl.hidden = true; return; }
+    lockEl.hidden = false;
+    var rec = roomRec(cur.id), st = rec ? rec.st : '';
+    stateP.textContent = st === 'open' ? '방 주인의 번호를 기다리는 방.' : st === 'set' ? '주인이 있는 방.' : '';
+    panel.hidden = !gl.open;
+    var editing = gl.unlocked && st === 'set';
+    pinForm.hidden = editing;
+    editBox.hidden = !editing;
+    if (editing && descI.dataset.room !== cur.id){ descI.value = (rec && rec.desc) || ''; nameI.value = (rec && rec.name) || ''; pickColor = (rec && rec.color) || cur.g.color; paintSwatches(); descI.dataset.room = cur.id; }
+    if (!editing) descI.dataset.room = '';
+    msgP.textContent = gl.msg;
+  }
+  widgets.rooms = render;
+
+  var doors = CONTENT.guests.map(function(g, i){
+    var id = g.id || 'g' + (i + 1);
+    var plate = h('span',{class:'plate'}, g.name);
+    var b = h('button',{class:'door',type:'button','aria-pressed':'false','aria-label':g.name.replace(/\n/g,' ') + ' 방 문',style:'--dc:' + g.color}, plate);
+    doorMeta[id] = { btn: b, plate: plate, g: g };
     b.addEventListener('click', function(){
       doors.forEach(function(d){ d.setAttribute('aria-pressed','false'); });
       b.setAttribute('aria-pressed','true');
-      desc.textContent = g.desc;
+      if (!cur || cur.id !== id) resetLock();
+      cur = { g: g, id: id };
+      render();
     });
     return b;
   });
@@ -1648,6 +1807,12 @@ try {
   onSnapshot(doc(fs, 'house', 'doorNote'), function(snap){ S.door = snap.exists() ? snap.data() : null; redraw('door'); }, shareFailed);
   onSnapshot(doc(fs, 'house', 'fridgeUser'), function(snap){ S.fridgeUser = snap.exists() ? snap.data() : null; redraw('fridge'); }, featureOff('fridgeUser'));
   onSnapshot(doc(fs, 'house', 'marker'), markerOnState, featureOff('marker'));
+  onSnapshot(collection(fs, 'guestRooms'), function(snap){
+    var map = {};
+    snap.docs.forEach(function(d){ var x = d.data(); map[d.id] = { st: x.st, pin: x.pin || '', desc: x.desc || '', name: x.name || '', color: /^#[0-9a-f]{6}$/i.test(x.color || '') ? x.color : '' }; });
+    S.rooms = map;
+    redraw('rooms');
+  }, featureOff('rooms'));
   onSnapshot(doc(fs, 'house', 'sofa'), function(snap){
     if (!snap.exists()){ S.sofa = null; } else {
       var x = snap.data({ serverTimestamps: 'estimate' });
