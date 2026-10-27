@@ -136,7 +136,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
   background:var(--crimson); box-shadow:0 2px 3px rgba(0,0,0,.5); transform:translateX(-50%);
 }
 .notice .lbl{display:block; margin-bottom:8px; font-size:10px; font-weight:500; letter-spacing:.3em; color:#7b818a}
-.notice .ntext{margin:0; font-family:var(--f-disp); font-size:17px; line-height:1.6; white-space:pre-line; overflow-wrap:anywhere}
+.notice .ntext{margin:0; font-family:var(--f-disp); font-weight:700; font-size:17px; line-height:1.6; white-space:pre-line; overflow-wrap:anywhere}
 .chips{display:flex; flex-wrap:wrap; gap:6px}
 .chip[aria-pressed="true"]{border-color:var(--teal); color:var(--teal)}
 .whiteboard{background:var(--board); color:var(--board-ink); font-family:var(--f-hand); font-size:24px; line-height:1.4; padding:16px 20px; border:4px solid #9aa6b2; min-height:170px; width:100%; box-sizing:border-box}
@@ -159,9 +159,22 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .food.vacant{display:grid; place-items:center; min-height:34px; border:1px dashed var(--line); border-radius:3px; color:var(--muted); font-size:13px}
 .mgrid{display:grid; grid-template-columns:repeat(5,minmax(0,46px)); gap:5px}
 .mcell{aspect-ratio:1; min-height:0; padding:0; font-variant-numeric:tabular-nums}
-.mcell.none{color:var(--muted)}
-.mcell.win{color:#e6c85a; border-color:#e6c85a}
-.mcell.dud{color:var(--crimson); border-color:var(--crimson)}
+.mcell.none{color:#7d8896; background:#0d1117; border-color:#222a34}
+.mcell.win{color:#ffe27a; background:#2b2410; border-color:#e6c85a; font-size:18px}
+.mcell.dud{color:#ff6b7d; background:#2a1016; border-color:#c0354a; font-size:18px}
+.mcell.none[disabled]{opacity:.8}
+.mcell.win[disabled],.mcell.dud[disabled]{opacity:1}
+.mwrap{position:relative}
+.mfx{position:absolute; inset:0; pointer-events:none; z-index:5}
+.mfx .ring{position:absolute; border-radius:4px; box-shadow:0 0 0 0 rgba(255,226,122,.9); animation:ring 1.1s ease-out forwards}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,226,122,.95),0 0 14px 2px rgba(255,226,122,.9)} 100%{box-shadow:0 0 0 22px rgba(255,226,122,0),0 0 30px 14px rgba(255,226,122,0)}}
+.mfx .conf{position:absolute; width:7px; height:11px; opacity:0; animation:conf 1.5s ease-out forwards}
+@keyframes conf{0%{opacity:1; transform:translate(0,0) rotate(0)} 100%{opacity:0; transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
+.mfx .puff{position:absolute; width:16px; height:16px; border-radius:50%; background:rgba(150,156,166,.55); filter:blur(3px); opacity:0; animation:puff 1.7s ease-out forwards}
+@keyframes puff{0%{opacity:.75; transform:translate(0,0) scale(.5)} 100%{opacity:0; transform:translate(var(--dx),-70px) scale(2.6)}}
+.mfx .banner{position:absolute; left:50%; top:42%; transform:translate(-50%,-50%); background:rgba(10,13,18,.92); border:1px solid #e6c85a; color:#ffe27a; font-family:var(--f-disp); font-size:18px; font-weight:700; padding:12px 16px; border-radius:4px; text-align:center; width:max-content; max-width:94%; word-break:keep-all; line-height:1.5; animation:banner 2.6s ease-out forwards}
+@keyframes banner{0%{opacity:0; transform:translate(-50%,-50%) scale(.6)} 12%{opacity:1; transform:translate(-50%,-50%) scale(1.08)} 22%{transform:translate(-50%,-50%) scale(1)} 85%{opacity:1} 100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){ .mfx .ring,.mfx .conf,.mfx .puff{display:none} .mfx .banner{animation:none} }
 .mcell:disabled{cursor:default}
 .pager{justify-content:space-between}
 .btn[disabled]{opacity:.4; cursor:default}
@@ -222,7 +235,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 
 <main class="wrap">
   <h1>크롤리의 집</h1>
-  <p class="lede">초인종은 누를 필요 없습니다. 방을 눌러서 들어와 보세요. 잠기지 않은 부분은 편하게 구경하셔도 됩니다.</p>
+  <p class="lede">초인종은 누를 필요 없습니다. 방을 눌러서 들어와 보세요.<br>잠기지 않은 부분은 편하게 구경하셔도 됩니다.</p>
 
   <div class="plan" id="plan">
     <section class="room" data-room="front" style="grid-area:front">
@@ -266,7 +279,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 3-1)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 4)</p>
 </main>
 
 <script type="module">
@@ -296,7 +309,8 @@ var CONTENT = {
     '「여기는 아래층. 응답하십시오. 응답하십시오.」',
     '「오늘의 징조: 흐림. 이유는 묻지 마십시오.」',
 '「지옥의 배신자에게는 언제나 모든 것이 너무 늦었습니다.」',
-'「끝을 마주하십시오.」'
+'「끝을 마주하십시오.」',
+    '「크롤리, 당장 대답해. 그러지 않으면 차라리 죽기를 바라게 될 거다.」'
 
 
   ],
@@ -308,6 +322,9 @@ var CONTENT = {
   '채널 12. 신께서는 내 인생의 배관공이시라네, 하는 이상한 CCM이 흘러나온다.',
   '채널 5, 가드닝 프로그램이 켜져 있다. 식물과 대화하기에 대한 내용이다.',
   '채널 4004. 지직거리는 화면이 떴다가 꺼진다.',
+  '채널 ???. 멋진 징조들 시즌 1 3화가 나오고 있다.',
+  '채널 ???. 멋진 징조들 시즌 2 1화가 나오고 있다.',
+  '채널 ???. 멋진 징조들 시즌 1 2화 중간 부분이 나오고 있다.',
 
 
 
@@ -332,15 +349,22 @@ var CONTENT = {
     '(지직) 아래층 사무실입니다. 서명하신 서류에 한 장이 빠졌습니다. 다시 연락드리겠습니다.',
     '(지직) 아래에서 가장 깊은 곳의 분들이 당신께 할 말씀이 있다고 하십니다.',
     '(지직) 화분 배달 건입니다. 식물에게 말을 걸어주지 않아 시들었다는 항의가 들어왔습니다.',
-    '삐—. 「…여보세요? 끊지 마. 거기 있는 거 알아.」'
+    '삐—. 「…여보세요? 끊지 마. 거기 있는 거 알아.」',
+    '삐—. 새 메시지가 도착했습니다. 대부님! 잘 있어요? 이번에 개가 아주 멋진 일을 해냈어요. 비가 올 때 용감하게 새끼 고양이들을 지켜냈죠. 나중에 오면 잔뜩 칭찬해 주세요.',
+    '삐—. 새 메시지가 도착했습니다. 크롤리, 샘 윈체스터야. 중요한 일이니 개인 회선으로 연락해 줘.',
+    '삐—. 새 메시지가 도착했습니다. 선생님, 교수가 정말 일부러 그러려고 한 게 아니고 오븐이 말을 안 들었습니다.',
+    '삐—. 자? 자는 거야?',
+    '삐—. 자니?',
+    '삐—. (그리고 아무 소리도 들려오지 않았다. 괴상한 웃음소리가 끝에 울리고 꺼졌다.)',
+    '삐—. 크롤리 씨, 지난 번에 찾아주셔서 감사합니다. 저희 경매장에서 고객님이 주문하신 물건을 구할 수 없어 유감을 표합니다. 대신 흥미를 끌 물건이 들어왔으니 조만간 방문해 주세요.'
   ],
-  tableItems: ['식은 커피잔','포장된 디저트 박스','카드 한 벌','파란 경찰 부스 키링','싱글 몰트 위스키 반 병','오만과 편견','눈알 모양 젤리 한 봉지','휘갈겨 쓴 메모지','읽다 만 책','검은 안경','열쇠 꾸러미','촛대','빈 와인잔','릿츠 영수증 한 장','시든 장미 한 송이'],
+  tableItems: ['식은 커피잔','포장된 디저트 박스','트럼프 카드 한 벌','원예가위','빈 화분','선글라스','파란 경찰 부스 키링','싱글 몰트 위스키 반 병','오만과 편견','눈알 모양 젤리 한 봉지','휘갈겨 쓴 메모지','읽다 만 책','검은 안경','열쇠 꾸러미','촛대','빈 와인잔','릿츠 영수증 한 장','시든 장미 한 송이'],
   shoes: ['반들반들한 검은 뱀 가죽 구두','진흙 묻은 부츠','끈 풀린 운동화','슬리퍼 한 짝','처음 보는 구두','굽이 닳은 로퍼','말끔한 구두','옆면이 닳은 구두','러닝화'],
   foods: ['에그 인 헬','티라미수','딤섬','수상한 병',
     '푸아그라','트러플 리조또','캐비어 한 스푼','랍스터 테르미도르','마카롱 상자','크렘 브륄레','와규 스테이크','생굴 한 접시','연어 카나페','샴페인 한 병','에클레어','프로슈토 멜론','비프 웰링턴','밀푀유'],
   notes: {
     minVotes: 3,
-    title: '칭찬과 고발 노트',
+    title: '이번 주의 객식구',
     intro: '이번 주에 있었던 일을 남겨 주세요. 매주 월요일에 새로 시작합니다.',
     goodTitle: '이번 주 좋은 객식구',
     badTitle: '이번 주 나쁜 객식구',
@@ -357,18 +381,30 @@ var CONTENT = {
     others: { win: '누군가 방금 당첨됐다!', dud: '누군가 방금 꽝에 걸렸다.' }
   },
   notice: '외출 중. 돌아오는 시간은 미정.',
-  ship: '해적을 꿈꾸는 수탉의 배',
-  taj: '어떤 고담 악당이 미리 만들어 둔 미래의 주거지',
+  ship: ['해적을 꿈꾸는 수탉의 배', '깃털이 그려진 졸리 로저가 인상적이다.', '아쉽게도 잠겨 있는 듯하다.'],
+  taj: ['어떤 고담 악당이 미리 만들어 둔 미래의 주거지', '공사중이라고 써진 팻말이 붙어 있다.'],
+  bentley: [
+    '크롤리의 근사한 클래식 벤틀리이다.',
+    '언제나 반들반들 윤이 난다.',
+    '뒷좌석에 총알 자국 스티커가 붙어 있다.',
+    '지금 퀸 노래가 들린 것 같다.',
+    '만지지 않는 게 좋겠다. 크롤리가 좋아하지 않을 것이다.'
+  ],
+  entryItems: [
+    '우산 한 자루', '물이 덜 마른 검은 우산', '접이식 양산', '우산꽂이에 꽂힌 지팡이',
+    '택배 상자 하나', '열쇠가 담긴 접시', '구둣주걱', '가죽 장갑 한 켤레',
+    '돌돌 말린 신문', '밟고 지나간 흙 자국', '현관 매트', '벗어 둔 코트'
+  ],
   extinguisher: [
     '평범한 소화기이다.',
     '어쩐지 새것처럼 보인다.',
     '가정집에 있기엔 지나치게 성능이 좋다.'
   ],
   utilItems: [
-    {name:'세탁기', lines:['코드가 뽑혀 있다. “객식구들 자유 사용 가능”이라고 적혀 있다.']},
-    {name:'건조기', lines:['코드가 뽑혀 있다. “객식구들 자유 사용 가능”이라고 적혀 있다.']},
-    {name:'청소도구함', lines:['걸레와 빗자루가 들어 있다. 빗자루는 한 번도 쓴 적 없어 보인다.']},
-    {name:'분리수거함', lines:['빈 와인병이 유독 많다.']}
+    {name:'세탁기', lines:['코드가 뽑혀 있다. “객식구들 자유 사용 가능”이라고 적혀 있다.', '드럼 안쪽이 말끔하다. 세제 냄새는 나지 않는다.', '문틈에 양말 한 짝이 끼어 있다.']},
+    {name:'건조기', lines:['코드가 뽑혀 있다. “객식구들 자유 사용 가능”이라고 적혀 있다.', '먼지 필터가 깨끗하게 비워져 있다.', '위에 개어 놓은 수건이 한 장 올려져 있다.']},
+    {name:'청소도구함', lines:['걸레와 빗자루가 들어 있다. 빗자루는 한 번도 쓴 적 없어 보인다.', '먼지떨이 깃털이 한 가닥 빠져 있다.', '걸레는 늘 마른 채로 걸려 있다.']},
+    {name:'분리수거함', lines:['빈 와인병이 유독 많다.', '라벨이 뜯겨 나간 병들이 섞여 있다.', '캔은 한 개도 없다.']}
   ],
   utilDoor: {
     label: '문',
@@ -377,7 +413,7 @@ var CONTENT = {
   },
   tarot: [
     {name:'바보', up:'가볍게 한 발 내딛기 좋은 날. 계획은 가는 길에 생긴다.', rev:'너무 서두르면 발밑이 비어 있을 수 있다. 한 번만 아래를 보자.'},
-    {name:'마법사', up:'가진 재료만으로 충분하다. 오늘은 손이 말을 잘 듣는다.', rev:'재주를 부리려다 꼬일 수 있다. 설명을 한 번 더 하자.'},
+    {name:'마법사', up:'일이 잘 풀릴 것이다. 다양한 재능을 활용하자.', rev:'능력을 과신하다 보면 일이 막힐 수 있다. 침착하게 다시 도전하자.'},
     {name:'여사제', up:'말하지 않은 것에 답이 있다. 직감을 믿어도 좋다.', rev:'숨겨진 이야기가 신경 쓰인다. 서두르지 말고 기다리자.'},
     {name:'여황제', up:'풍요로운 하루. 돌보는 만큼 돌아온다.', rev:'너무 챙기다 지칠 수 있다. 나 자신도 챙기자.'},
     {name:'황제', up:'질서가 잡히는 날. 정한 대로 밀고 나가도 좋다.', rev:'고집이 일을 키운다. 한 발 물러서는 쪽이 이득이다.'},
@@ -420,14 +456,17 @@ var CONTENT = {
   labInner: [
     '열리지 않는다. 문 밑으로 미지근한 김이 새어 나온다.',
     '열쇠구멍으로 보글보글 소리가 난다.',
-    '문틈 사이로 푸르스름한 빛이 번졌다가 사라진다.'
+    '문틈 사이로 푸르스름한 빛이 번졌다가 사라진다.',
+    '어쩐지 달짝지근한 냄새가 나는 것 같다.',
+    '문 안에서 작게 터지는 소리가 들린다.',
+    '“가루 두 스푼, 참새 뿔 세 개, 고양이 수염과 달빛 정제 5ml”'
   ],
   guests: [
     {name:'코린트인', color:'#3b4a63', desc:'이름표는 없고 밖을 내다보는 구멍은 눈 모양이다. 어쩐지 가까이 가면 안 될 것 같다.'},
     {name:'피터 파커', color:'#4b3b63', desc:'메모지가 붙어 있다. “자주 안 와도 치우지 마세요!”'},
 {name:'까만 크롤리', color:'#3b6358', desc:'“주인아 분유 타와라.”라고 메모지만 붙어 있다.'},
     {name:'두 시의\n코린트인', color:'#63503b', desc:'문틈으로 불빛이 새어 나온다. 인기척은 느껴지지 않는다.'},
-{name:'루이', color:'#633b4a', desc:'어둡고 조용하지만 누군가 있는 듯하다'},
+{name:'루이', color:'#633b4a', desc:'어둡고 조용하지만 누군가 있는 듯하다.'},
 {name:'윌&로비', color:'#3b5263', desc:'“손님방 아님.” 이라고 적혀 있다.'},
 {name:'레스트라드', color:'#4a633b', desc:'장기 거주자인 듯 유독 안락해 보인다.'},
 {name:'닥터', color:'#63603b', desc:'가끔 무언가 터지는 듯한 소리가 들려오면 거의 이 방이다.'},
@@ -591,7 +630,7 @@ function phoneBox(){
     h('button',{class:'btn',type:'button',onclick:function(){
       var next = pick(CONTENT.phone.filter(function(p){ return p !== last; }));
       last = next; line.textContent = next;
-    }},'전화기 누르기'),
+    }},'메시지 확인하기'),
     line
   );
 }
@@ -696,14 +735,14 @@ function doorBox(){
 function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function shoesNow(){
   var rnd = mulberry32(Math.floor(Date.now() / (30*60*1000)));
-  var pool = CONTENT.shoes.slice(), n = 2 + Math.floor(rnd()*3), out = [];
+  var pool = CONTENT.shoes.concat(CONTENT.entryItems || []), n = 2 + Math.floor(rnd()*3), out = [];
   while (out.length < n && pool.length) out.push(pool.splice(Math.floor(rnd()*pool.length),1)[0]);
   return out;
 }
 function mountEntry(body){
   body.append(
     obj('문 앞 메모', doorBox()),
-    obj('현관 신발', h('p',{class:'flavor'}, shoesNow().join(', ') + '.')),
+    obj('현관에 놓인 것', h('p',{class:'flavor'}, shoesNow().join(', ') + '.')),
     obj('방명록', guestbookBox())
   );
 }
@@ -795,10 +834,10 @@ function fridgeBox(){
   var right = h('div',{class:'fcol'});
   var said = h('p',{class:'flavor','aria-live':'polite'},'냉장고 안이 가득 차 있다.');
   var status = h('p',{class:'hint'});
-  var input = h('input',{id:'food-name',type:'text',maxlength:'12',placeholder:'넣을 음식 이름',autocomplete:'off','aria-label':'넣을 음식 이름'});
+  var input = h('input',{id:'food-name',type:'text',maxlength:'17',placeholder:'넣을 음식 이름',autocomplete:'off','aria-label':'넣을 음식 이름'});
   var form = h('form',{class:'row',onsubmit:async function(e){
     e.preventDefault();
-    var name = input.value.trim().slice(0, 12);
+    var name = input.value.trim().slice(0, 17);
     if (!name) return;
     input.value = '';
     var sl = userSlots(), i = -1, pushed = '';
@@ -917,6 +956,30 @@ function markerOnState(snap){
   }
   redraw('marker');
 }
+function markerFx(k, c, text){
+  var fx = M.fx, grid = M.grid;
+  if (!fx || !grid || !fx.parentNode || !grid.children[c]) return;
+  var g = grid.getBoundingClientRect(), r = grid.children[c].getBoundingClientRect();
+  var base = fx.parentNode.getBoundingClientRect();
+  var cx = r.left - base.left + r.width/2, cy = r.top - base.top + r.height/2;
+  var made = [];
+  function add(el){ fx.append(el); made.push(el); }
+  if (k === 'win'){
+    add(h('div',{class:'ring',style:'left:' + (r.left - base.left) + 'px;top:' + (r.top - base.top) + 'px;width:' + r.width + 'px;height:' + r.height + 'px'}));
+    var cols = ['#ffe27a','#ff6b7d','#5fd0c0','#9bb8ff','#ffffff','#e6c85a'];
+    for (var i = 0; i < 30; i++){
+      var a = Math.random()*Math.PI*2, d = 50 + Math.random()*110;
+      add(h('div',{class:'conf',style:'left:' + cx + 'px;top:' + cy + 'px;background:' + cols[i % cols.length] +
+        ';--dx:' + Math.round(Math.cos(a)*d) + 'px;--dy:' + Math.round(Math.sin(a)*d + 40) + 'px;--rot:' + Math.round(Math.random()*720 - 360) + 'deg;animation-delay:' + Math.round(Math.random()*120) + 'ms'}));
+    }
+    add(h('div',{class:'banner'}, text));
+  } else if (k === 'dud'){
+    for (var j = 0; j < 7; j++){
+      add(h('div',{class:'puff',style:'left:' + (cx - 8 + Math.random()*10 - 5) + 'px;top:' + (cy - 4) + 'px;--dx:' + Math.round(Math.random()*40 - 20) + 'px;animation-delay:' + (j*130) + 'ms'}));
+    }
+  }
+  setTimeout(function(){ made.forEach(function(el){ el.remove(); }); }, 2800);
+}
 async function markCell(c){
   if (M.marks[c]) return;
   var st = M.st;
@@ -937,10 +1000,12 @@ async function markCell(c){
   }
   M.said = markerText(k, m);
   redraw('marker');
+  markerFx(k, c, M.said);
   markerCheckDone();
 }
 function markerBox(){
-  var grid = h('div',{class:'mgrid'});
+  var grid = h('div',{class:'mgrid'}); M.grid = grid;
+  var fxLayer = h('div',{class:'mfx','aria-hidden':'true'}); M.fx = fxLayer;
   var said = h('p',{class:'flavor','aria-live':'polite'});
   var info = h('p',{class:'hint'});
   widgets.marker = function(){
@@ -951,7 +1016,7 @@ function markerBox(){
       (function(c){
         var mk = M.marks[c];
         cells.push(h('button',{class:'btn mcell' + (mk ? ' ' + mk.k : ''), type:'button', disabled: !!mk, 'aria-label': (c + 1) + '번 칸',
-          onclick:function(){ markCell(c); }}, mk ? (mk.k === 'win' ? '★' : mk.k === 'dud' ? '●' : '×') : String(c + 1)));
+          onclick:function(){ markCell(c); }}, mk ? (mk.k === 'win' ? '★' : mk.k === 'dud' ? '●' : '·') : String(c + 1)));
       })(c);
     }
     grid.replaceChildren.apply(grid, cells);
@@ -962,7 +1027,7 @@ function markerBox(){
       (markerShared() ? '' : ' · 지금은 내 브라우저에서만 돌아가요.');
   };
   widgets.marker();
-  return h('div',{class:'tvwrap'}, grid, said, info);
+  return h('div',{class:'tvwrap'}, h('div',{class:'mwrap'}, grid, fxLayer), said, info);
 }
 
 function mountKitchen(body){
@@ -1001,6 +1066,9 @@ function mountUtil(body){
         h('button',{class:'odd',type:'button','aria-label':'잠긴 문',onclick:function(){ said.textContent = pick(CONTENT.labInner); }}));
     } else {
       door = h('button',{class:'btn uitem',type:'button',onclick:function(){
+        var nowT = Date.now();
+        if (nowT - (lab.last || 0) > 2000) lab.clicks = 0;
+        lab.last = nowT;
         lab.clicks++;
         if (lab.clicks >= 5){ lab.open = true; said.textContent = CONTENT.utilDoor.opened; draw(true); return; }
         said.textContent = pick(CONTENT.utilDoor.lines);
@@ -1020,13 +1088,18 @@ function mountUtil(body){
 }
 
 function descBox(name, text){
-  var said = h('p',{class:'flavor','aria-live':'polite'});
+  var said = h('p',{class:'flavor','aria-live':'polite'}), last = -1;
+  var lines = Array.isArray(text) ? text : [text];
   return h('div',{class:'tvwrap'},
-    h('button',{class:'btn uitem',type:'button',onclick:function(){ said.textContent = text; }}, name),
+    h('button',{class:'btn uitem',type:'button',onclick:function(){
+      var i = Math.floor(Math.random()*lines.length);
+      if (lines.length > 1 && i === last) i = (i + 1 + Math.floor(Math.random()*(lines.length - 1))) % lines.length;
+      last = i; said.textContent = lines[i];
+    }}, name),
     said
   );
 }
-function mountFront(body){ body.append(h('div',{class:'obj'}, descBox('해적선', CONTENT.ship))); }
+function mountFront(body){ body.append(h('div',{class:'obj'}, descBox('해적선', CONTENT.ship)), h('div',{class:'obj'}, descBox('벤틀리', CONTENT.bentley))); }
 function mountBack(body){ body.append(h('div',{class:'obj'}, descBox('블랙 타지마할', CONTENT.taj))); }
 
 /* ===== 방 열고 닫기 ===== */
