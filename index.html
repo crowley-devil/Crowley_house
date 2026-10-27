@@ -42,10 +42,10 @@ button{font:inherit; color:inherit}
 
 .plan{
   display:grid; gap:10px; grid-template-columns:repeat(3,minmax(0,1fr));
-  grid-template-areas:"entry entry entry" "study living kitchen" "util . ."; align-items:start;
+  grid-template-areas:"front entry entry" "study living kitchen" "util back ."; align-items:start;
 }
 @media (max-width:760px){
-  .plan{grid-template-columns:minmax(0,1fr); grid-template-areas:"entry" "living" "kitchen" "study" "util"}
+  .plan{grid-template-columns:minmax(0,1fr); grid-template-areas:"entry" "front" "living" "kitchen" "study" "util" "back"}
 }
 .room{
   position:relative; background:var(--room); border:1px solid var(--line); border-left:3px solid #6b2a37; border-radius:3px;
@@ -81,12 +81,6 @@ input[type=text]{
   font:inherit; color:var(--ink); background:var(--room-deep); border:1px solid var(--line); border-radius:3px; padding:6px 10px; min-height:34px;
 }
 input[type=text]::placeholder{color:var(--muted)}
-/* 다용도실: 눈에 잘 안 띄는 구석 */
-.room[data-room="util"]{justify-self:start; width:150px; max-width:100%; opacity:.55; border-left-color:var(--line)}
-.room[data-room="util"] .rn{font-size:14px}
-.room[data-room="util"] .rh{display:none}
-.room[data-room="util"]:hover,.room[data-room="util"][data-open="true"]{opacity:1}
-.room[data-room="util"][data-open="true"]{width:230px}
 [hidden]{display:none!important}
 textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px solid var(--line); border-radius:3px; padding:6px 10px; width:100%; resize:vertical}
 
@@ -110,10 +104,17 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .tvwrap{display:grid; gap:8px; justify-items:start}
 
 /* 메모와 화이트보드 */
-.sticky{
-  background:var(--note); color:var(--note-ink); font-family:var(--f-hand); font-size:20px; line-height:1.35;
-  padding:12px 14px; transform:rotate(-1deg); max-width:30ch; box-shadow:0 2px 0 rgba(0,0,0,.35);
+.notice{
+  position:relative; background:#e9e7e2; color:#16191f; border-top:3px solid var(--crimson);
+  padding:20px 20px 16px; max-width:34ch; transform:rotate(-.6deg);
+  box-shadow:0 12px 18px -14px rgba(0,0,0,.9);
 }
+.notice::before{
+  content:""; position:absolute; top:-9px; left:50%; width:10px; height:10px; border-radius:50%;
+  background:var(--crimson); box-shadow:0 2px 3px rgba(0,0,0,.5); transform:translateX(-50%);
+}
+.notice .lbl{display:block; margin-bottom:8px; font-size:10px; font-weight:500; letter-spacing:.3em; color:#7b818a}
+.notice .ntext{margin:0; font-family:var(--f-disp); font-size:17px; line-height:1.6; white-space:pre-line; overflow-wrap:anywhere}
 .chips{display:flex; flex-wrap:wrap; gap:6px}
 .chip[aria-pressed="true"]{border-color:var(--teal); color:var(--teal)}
 .whiteboard{background:var(--board); color:var(--board-ink); font-family:var(--f-hand); font-size:24px; line-height:1.4; padding:16px 20px; border:4px solid #9aa6b2; min-height:260px}
@@ -140,6 +141,10 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .odd::after{background:#7a3a47}
 .graydoor.open::after{background:#4a525c}
 .graydoor.shake{animation:shake .18s linear}
+.utilgrid{display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end}
+.uitem{min-height:56px; padding:8px 12px; background:var(--room-deep)}
+.tarot-out{display:grid; gap:2px; font-family:var(--f-disp)}
+.tarot-out strong{color:var(--teal); font-weight:700}
 
 /* 객식구 복도 */
 .corridor{margin-top:14px; border:1px solid var(--line); background:var(--room-deep); padding:14px 14px 10px; border-radius:3px}
@@ -176,6 +181,10 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
       <button class="room-head" type="button" aria-expanded="false" aria-controls="b-entry"><span class="rn">현관</span><span class="rh">들어가기</span></button>
       <div class="room-body" id="b-entry" hidden></div>
     </section>
+    <section class="room" data-room="front" style="grid-area:front">
+      <button class="room-head" type="button" aria-expanded="false" aria-controls="b-front"><span class="rn">앞마당</span><span class="rh">나가기</span></button>
+      <div class="room-body" id="b-front" hidden></div>
+    </section>
     <section class="room" data-room="study" style="grid-area:study">
       <button class="room-head" type="button" aria-expanded="false" aria-controls="b-study"><span class="rn">서재</span><span class="rh">잠겨 있음</span></button>
       <p class="leak" id="leak" aria-live="polite"></p>
@@ -193,6 +202,10 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
     <section class="room" data-room="util" style="grid-area:util">
       <button class="room-head" type="button" aria-expanded="false" aria-controls="b-util"><span class="rn">다용도실</span><span class="rh">들어가기</span></button>
       <div class="room-body" id="b-util" hidden></div>
+    </section>
+    <section class="room" data-room="back" style="grid-area:back">
+      <button class="room-head" type="button" aria-expanded="false" aria-controls="b-back"><span class="rn">뒷마당</span><span class="rh">나가기</span></button>
+      <div class="room-body" id="b-back" hidden></div>
     </section>
   </div>
 
@@ -275,6 +288,43 @@ var CONTENT = {
   foods: ['오믈렛','사과 반쪽','에그 인 헬','티라미수','남은 피자','포도','요거트','딤섬','잼 병','푸딩','초콜릿','레몬','샐러드','수상한 병',
     '푸아그라','트러플 리조또','캐비어 한 스푼','랍스터 테르미도르','마카롱 상자','크렘 브륄레','와규 스테이크','생굴 한 접시','연어 카나페','샴페인 한 병','에클레어','프로슈토 멜론','비프 웰링턴','밀푀유'],
   notice: '외출 중. 돌아오는 시간은 미정.',
+  ship: '해적을 꿈꾸는 수탉의 배',
+  taj: '어떤 고담 악당이 미리 만들어 둔 미래의 주거지',
+  extinguisher: [
+    '평범한 소화기이다.',
+    '어쩐지 새것처럼 보인다.',
+    '가정집에 있기엔 지나치게 성능이 좋다.'
+  ],
+  utilItems: [
+    {name:'세탁기', lines:['탈수 중이다. 아무도 돌린 기억이 없다.', '안에 검은 옷만 들어 있다.']},
+    {name:'건조대', lines:['검은 셔츠가 줄지어 널려 있다. 전부 다림질이 되어 있다.']},
+    {name:'청소도구함', lines:['걸레와 빗자루가 들어 있다. 빗자루는 한 번도 쓴 적 없어 보인다.']},
+    {name:'분리수거함', lines:['빈 와인병이 유독 많다.']}
+  ],
+  tarot: [
+    {name:'바보', up:'가볍게 한 발 내딛기 좋은 날. 계획은 가는 길에 생긴다.', rev:'너무 서두르면 발밑이 비어 있을 수 있다. 한 번만 아래를 보자.'},
+    {name:'마법사', up:'가진 재료만으로 충분하다. 오늘은 손이 말을 잘 듣는다.', rev:'재주를 부리려다 꼬일 수 있다. 설명을 한 번 더 하자.'},
+    {name:'여사제', up:'말하지 않은 것에 답이 있다. 직감을 믿어도 좋다.', rev:'숨겨진 이야기가 신경 쓰인다. 서두르지 말고 기다리자.'},
+    {name:'여황제', up:'풍요로운 하루. 돌보는 만큼 돌아온다.', rev:'너무 챙기다 지칠 수 있다. 나 자신도 챙기자.'},
+    {name:'황제', up:'질서가 잡히는 날. 정한 대로 밀고 나가도 좋다.', rev:'고집이 일을 키운다. 한 발 물러서는 쪽이 이득이다.'},
+    {name:'교황', up:'배운 방식이 도움이 된다. 믿을 만한 사람에게 물어보자.', rev:'관습이 답답하게 느껴진다. 오늘은 나만의 방식으로 해보자.'},
+    {name:'연인', up:'좋은 선택이 가까이 있다. 마음이 가는 쪽이 정답이다.', rev:'결정을 미루다 엇갈릴 수 있다. 솔직하게 말하자.'},
+    {name:'전차', up:'밀어붙이면 되는 날. 방향만 정하면 속도는 따라온다.', rev:'힘만 앞서면 길을 놓친다. 잠깐 고삐를 쥐자.'},
+    {name:'힘', up:'부드러움이 이긴다. 오늘은 참는 쪽이 세다.', rev:'자신감이 흔들린다. 작은 성공부터 하나 만들자.'},
+    {name:'은둔자', up:'혼자 있는 시간이 답을 준다. 조용한 곳을 찾자.', rev:'너무 오래 숨어 있었다. 누군가에게 먼저 연락해보자.'},
+    {name:'운명의 수레바퀴', up:'흐름이 바뀐다. 예상 밖의 좋은 소식이 올 수 있다.', rev:'타이밍이 어긋나는 날. 일정은 여유 있게 잡자.'},
+    {name:'정의', up:'공정하게 풀리는 날. 해야 할 말은 정확하게 하자.', rev:'계산이 틀어질 수 있다. 숫자와 약속을 다시 확인하자.'},
+    {name:'매달린 사람', up:'멈춰서 보면 다른 각도가 보인다. 기다림도 일이다.', rev:'쓸데없는 인내는 접어도 된다. 움직일 때가 왔다.'},
+    {name:'죽음', up:'끝나는 것은 새로 시작할 자리를 낸다. 미련 하나를 정리하자.', rev:'놓지 못한 것이 발목을 잡는다. 작은 것부터 비우자.'},
+    {name:'절제', up:'균형이 맞는 하루. 섞어서 쓰면 맛이 난다.', rev:'과하거나 모자라기 쉽다. 오늘은 양 조절이 관건이다.'},
+    {name:'악마', up:'유혹이 달콤한 날. 알면서 즐기는 건 괜찮다.', rev:'오래된 습관이 헐거워진다. 오늘이 끊기 좋은 날이다.'},
+    {name:'탑', up:'예고 없이 무너지는 게 있다. 무너진 자리가 더 단단해진다.', rev:'피한 줄 알았던 일이 돌아온다. 미리 손을 쓰자.'},
+    {name:'별', up:'희망이 보이는 날. 작은 소원 하나를 소리 내어 말해보자.', rev:'기운이 조금 가라앉는다. 따뜻한 걸 마시고 일찍 쉬자.'},
+    {name:'달', up:'모호한 하루. 확실하지 않은 건 내일 결정하자.', rev:'안개가 걷힌다. 불안했던 이유가 의외로 별것 아니다.'},
+    {name:'태양', up:'뭘 해도 잘 풀리는 날. 기쁜 일은 널리 나누자.', rev:'구름이 잠깐 낀다. 기대를 조금만 낮추면 충분히 좋은 날이다.'},
+    {name:'심판', up:'미뤄둔 일을 다시 꺼낼 때. 용서하거나 용서받을 일이 있다.', rev:'자책이 길어진다. 이미 지난 일은 이제 그만두자.'},
+    {name:'세계', up:'하나가 완성되는 날. 마무리를 짓고 한숨 돌리자.', rev:'마지막 한 조각이 빠졌다. 끝내지 못한 일 하나를 확인하자.'}
+  ],
   study: [
     '누구야. 문 두드리지 마.',
     '…식물들, 오늘 왜 이렇게 조용하지.',
@@ -415,6 +465,48 @@ function tvBox(){
   return h('div',{class:'tvwrap'}, screen, off);
 }
 
+function lineBox(label, lines, idle){
+  var line = h('p',{class:'flavor','aria-live':'polite'}, idle);
+  var last = '';
+  return h('div',{class:'tvwrap'},
+    h('button',{class:'btn',type:'button',onclick:function(){
+      var pool = lines.filter(function(l){ return l !== last; });
+      last = pick(pool.length ? pool : lines);
+      line.textContent = last;
+    }}, label),
+    line
+  );
+}
+
+/* 타로: 하루 1번(한국 시간 기준). 같은 날 다시 누르면 같은 카드가 나온다 */
+var tarotMem = null;
+function todayKST(){
+  try { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }); }
+  catch(e){ return new Date().toISOString().slice(0, 10); }
+}
+function tarotBox(){
+  var out = h('div',{class:'tarot-out','aria-live':'polite'});
+  var btn = h('button',{class:'btn',type:'button'});
+  function today(){
+    var s = lsGet('crowley.tarot', null) || tarotMem;
+    return (s && s.date === todayKST()) ? s : null;
+  }
+  function label(){ btn.textContent = today() ? '오늘의 카드 다시 보기' : '타로 카드 뽑기'; }
+  btn.addEventListener('click', function(){
+    var s = today();
+    if (!s){
+      s = { date: todayKST(), i: Math.floor(Math.random()*CONTENT.tarot.length), rev: Math.random() < 0.5 };
+      tarotMem = s;
+      lsSet('crowley.tarot', s);
+    }
+    var c = CONTENT.tarot[s.i];
+    if (c) out.replaceChildren(h('strong', null, c.name + ' · ' + (s.rev ? '역방향' : '정방향')), h('span', null, s.rev ? c.rev : c.up));
+    label();
+  });
+  label();
+  return h('div',{class:'tvwrap'}, btn, out);
+}
+
 function phoneBox(){
   var line = h('p',{class:'flavor','aria-live':'polite'},'수화기는 내려져 있다.');
   var last = '';
@@ -476,8 +568,9 @@ function curNotice(){
   return t || CONTENT.notice;
 }
 function doorBox(){
-  var note = h('div',{class:'sticky','aria-live':'polite'});
-  widgets.door = function(){ note.textContent = curNotice(); };
+  var txt = h('p',{class:'ntext'});
+  var note = h('div',{class:'notice','aria-live':'polite'}, h('span',{class:'lbl'},'NOTICE'), txt);
+  widgets.door = function(){ txt.textContent = curNotice(); };
   widgets.door();
   return h('div',{class:'tvwrap'}, note);
 }
@@ -504,7 +597,7 @@ function mountLiving(body){
     obj('왕좌 의자', h('p',{class:'flavor'}, CONTENT.throne)),
     obj('텔레비전', tvBox()),
     obj('책상 위 전화', phoneBox()),
-    obj('테이블', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.'))
+    obj('테이블', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.'), tarotBox())
   );
   armScare();
 }
@@ -603,7 +696,8 @@ function mountKitchen(body){
   body.append(
     obj('냉장고 화이트보드', boardBox()),
     obj('냉장고 안', fridgeBox()),
-    obj('식탁', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.'))
+    obj('식탁', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.')),
+    obj('소화기', lineBox('소화기 살펴보기', CONTENT.extinguisher, '벽에 붙어 있다.'))
   );
 }
 
@@ -623,25 +717,32 @@ function mountStudy(body){
 
 var lab = { clicks:0, open:false };
 function mountUtil(body){
-  var wrap = h('div',{class:'doors'});
+  var grid = h('div',{class:'utilgrid'});
   var said = h('p',{class:'flavor','aria-live':'polite'});
   function draw(refocus){
-    wrap.replaceChildren();
+    grid.replaceChildren();
     var gd = h('button',{class:'graydoor' + (lab.open ? ' open' : ''),type:'button','aria-label':'회색 문',onclick:function(){
       if (lab.open) return;
       lab.clicks++;
       if (lab.clicks >= 5){ lab.open = true; draw(true); return; }
       gd.classList.remove('shake'); void gd.offsetWidth; gd.classList.add('shake');
     }});
-    wrap.append(gd);
-    if (lab.open){
-      wrap.append(h('button',{class:'odd',type:'button','aria-label':'잠긴 수상한 문',onclick:function(){ said.textContent = pick(CONTENT.labInner); }}));
-    }
-    if (refocus){ var f = lab.open ? wrap.querySelector('.odd') : gd; if (f) f.focus(); }
+    var odd = lab.open ? h('button',{class:'odd',type:'button','aria-label':'잠긴 수상한 문',onclick:function(){ said.textContent = pick(CONTENT.labInner); }}) : null;
+    var nodes = CONTENT.utilItems.map(function(it){
+      return h('button',{class:'btn uitem',type:'button',onclick:function(){ said.textContent = pick(it.lines); }}, it.name);
+    });
+    /* 회색 문은 물건들 사이에 섞어 둔다 */
+    nodes.splice(Math.min(2, nodes.length), 0, gd);
+    if (odd) nodes.splice(nodes.indexOf(gd) + 1, 0, odd);
+    grid.append.apply(grid, nodes);
+    if (refocus){ var f = odd || gd; f.focus(); }
   }
   draw(false);
-  body.append(h('div',{class:'obj'}, wrap, said));
+  body.append(h('div',{class:'obj'}, grid, said));
 }
+
+function mountFront(body){ body.append(obj('해적선', h('p',{class:'flavor'}, CONTENT.ship))); }
+function mountBack(body){ body.append(obj('블랙 타지마할', h('p',{class:'flavor'}, CONTENT.taj))); }
 
 /* ===== 방 열고 닫기 ===== */
 var ROOMS = {
@@ -649,7 +750,9 @@ var ROOMS = {
   entry:   { mount: mountEntry,   widgets:['guestbook','door'] },
   kitchen: { mount: mountKitchen, widgets:['board','fridge'] },
   study:   { mount: mountStudy,   widgets:[] },
-  util:    { mount: mountUtil,    widgets:[] }
+  util:    { mount: mountUtil,    widgets:[] },
+  front:   { mount: mountFront,   widgets:[] },
+  back:    { mount: mountBack,    widgets:[] }
 };
 var openRoom = null;
 function closeRoom(id){
@@ -703,18 +806,32 @@ function showLeak(){
   leakEl.textContent = pick(CONTENT.study);
   leakEl.classList.add('show');
   clearTimeout(leakT);
-  leakT = setTimeout(function(){ leakEl.classList.remove('show'); }, 7000);
+  leakT = setTimeout(function(){ leakEl.classList.remove('show'); }, 10000);
 }
-/* 서재는 대체로 비어 있고, 가끔 크롤리가 들어와 있는 동안만 기척이 난다 */
-loop(function(){
-  if (document.hidden || studyIn) return;
+/* 서재: 모두에게 같은 시계로 정해진다. 약 9분 주기마다 2~4분 동안 크롤리가 들어와 있고, 그동안 40초쯤 간격으로 대사가 새어 나온다 */
+var STUDY_CYCLE = 9*60*1000, lastLeak = 0;
+function studyPresentAt(now){
+  var slot = Math.floor(now / STUDY_CYCLE);
+  var r = mulberry32(slot * 7919 + 17);
+  var off = 30000 + r()*240000, dur = 120000 + r()*120000;
+  var t = now - slot*STUDY_CYCLE;
+  return t >= off && t < off + dur;
+}
+function studyTick(){
+  var now = Date.now();
+  var inside = studyPresentAt(now);
   var hint = $('.rh', $('[data-room="study"]'));
-  studyIn = true;
-  hint.textContent = '인기척이 있음';
-  showLeak();
-  setTimeout(function(){ if (studyIn && !document.hidden) showLeak(); }, 14000);
-  setTimeout(function(){ studyIn = false; hint.textContent = '잠겨 있음'; }, 30000);
-}, 60, 150);
+  if (inside && !studyIn){
+    studyIn = true; hint.textContent = '인기척이 있음';
+    if (!document.hidden){ showLeak(); lastLeak = now; }
+  } else if (!inside && studyIn){
+    studyIn = false; hint.textContent = '잠겨 있음';
+  } else if (inside && !document.hidden && now - lastLeak >= 40000){
+    showLeak(); lastLeak = now;
+  }
+}
+studyTick();
+setInterval(studyTick, 5000);
 loop(tvOn, 45, 130);
 
 /* ===== 공유 저장소 연결 ===== */
