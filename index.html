@@ -391,7 +391,7 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-23)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-24)</p>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
@@ -1593,11 +1593,10 @@ function markerBox(){
 
 function mountKitchen(body){
   var ui = pantryUI();
-  var items = pickN(CONTENT.tableItems, Math.floor(Math.random()*3));
   body.append(
     obj('냉장고 화이트보드', boardBox()),
     obj('냉장고 안', fridgeBox()),
-    obj('식탁', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.'), tableBox()),
+    obj('식탁', tableBox()),
     obj('소화기', lineBox('소화기 살펴보기', CONTENT.extinguisher, '벽에 붙어 있다.')),
     obj('찬장', ui.shelf, stockBox()),
     obj('싱크대', ui.sink)
