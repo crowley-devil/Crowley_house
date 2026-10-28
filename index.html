@@ -223,6 +223,21 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .gear{font-size:20px; line-height:1; transition:transform .5s}
 .gear.spin{transform:rotate(360deg)}
 @media (prefers-reduced-motion:reduce){ .gear{transition:none} }
+/* 기분 구슬, 쿠키 칸, 책 읽기 */
+.jars{width:100%; display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:8px}
+.jarbtn{display:grid; gap:6px; justify-items:center; align-content:start; padding:8px 6px; min-height:96px; text-align:center; cursor:pointer;
+  background:var(--room-deep); border:1px solid var(--line); border-radius:3px}
+.jarbtn:hover:not(:disabled){border-color:var(--jc)}
+.jarbtn:disabled{cursor:default; opacity:.75}
+.jar{width:44px; height:54px; padding:3px; overflow:hidden; display:flex; flex-wrap:wrap-reverse; align-content:flex-start; justify-content:center; gap:1px;
+  border:2px solid var(--jc); border-top-width:3px; border-radius:5px 5px 14px 14px}
+.mb{display:block; width:9px; height:9px; border-radius:50%; background:var(--jc)}
+.mb.new{animation:mbdrop .8s ease-out both}
+@keyframes mbdrop{from{background:#cfd6df; transform:translateY(-22px)} to{background:var(--jc); transform:none}}
+@media (prefers-reduced-motion:reduce){ .mb.new{animation:none} }
+.subslot{border-top:1px dashed var(--line); padding-top:6px; display:grid; gap:6px}
+.readline{margin:0; font-family:var(--f-disp)}
+
 /* 이주의 객식구, 칭찬과 고발 노트 */
 .weekly{display:grid; gap:2px; margin:6px 0 10px; font-size:14px}
 .weekly b{font-weight:500}
@@ -355,7 +370,7 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-17)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-19)</p>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
@@ -556,6 +571,87 @@ var CONTENT = {
     { e: '🫠', t: '녹아내리는 중' },
     { e: '🖤', t: '아무것도 묻지 마' }
   ],
+  /* 찬장 쿠키 칸: 5종 중 2종이 칸에 들어가고, 종류마다 5개 */
+  cookies: {
+    perSlot: 5,
+    kinds: [
+      { name: '초코칩 쿠키', eat: '초코가 녹아 손가락에 묻는다.' },
+      { name: '버터 쿠키', eat: '한 입에 사라진다. 상자에는 빈 칸만 남는다.' },
+      { name: '오트밀 건포도 쿠키', eat: '건포도가 듬뿍 들어 있다. 호불호가 갈리는 맛이다.' },
+      { name: '화이트초코 마카다미아 쿠키', eat: '너무 달아서 커피가 당긴다.' },
+      { name: '얼그레이 쿠키', eat: '홍차 향이 먼저 오고 단맛이 뒤따라온다.' }
+    ],
+    empty: '다 떨어졌다. 채울 걸 골라 주세요.',
+    refilled: '을(를) 채워 넣었다.',
+    notReady: '쿠키 칸은 아직 준비 중이에요.'
+  },
+  /* 기분 구슬: 하루(한국 시간)에 한 사람이 perDay개, 병 6개 */
+  marbles: {
+    perDay: 2,
+    jars: [
+      { name: '기쁨', color: '#f2c14e', put: '구슬이 노란빛으로 물든다.' },
+      { name: '평온', color: '#6fb7e8', put: '구슬이 맑은 하늘빛으로 가라앉는다.' },
+      { name: '설렘', color: '#f08bb5', put: '구슬이 분홍빛으로 톡 튄다.' },
+      { name: '피곤', color: '#9b7be0', put: '구슬이 보랏빛으로 천천히 구른다.' },
+      { name: '심술', color: '#f08a3c', put: '구슬이 주황빛으로 탁 부딪힌다.' },
+      { name: '우울', color: '#4a6fc4', put: '구슬이 짙은 남색으로 무겁게 가라앉는다.' }
+    ],
+    left: '오늘 넣을 수 있는 구슬 {n}개',
+    done: '오늘의 구슬을 모두 넣었다.',
+    fail: '지금은 구슬을 넣을 수 없어요.',
+    notReady: '구슬병은 아직 준비 중이에요.'
+  },
+  /* 책 읽기: 분야를 고르면 그 분야 책 하나가 랜덤으로 정해진다. 분야마다 한 사람, 전체 seats명까지.
+     t가 있으면 제목을 보여 주고, 없으면 문구만 보여 준다. free:true인 책은 분야를 선점하지 않는다 */
+  books: {
+    seats: 3,
+    cats: [
+      { name: '고전 소설', books: [
+        { t: '오만과 편견', x: '앞에 메모가 하나 있다. 제인 오스틴이 작가였다니, 놀랄 일이야.' },
+        { t: '프랑켄슈타인', x: '어쩐지 다른 판본보다 크리쳐 시점이 더 자세한 것 같다. 착각일까?' },
+        { t: '작은 아씨들', x: '네 자매가 다투고 웃으며 자라는 이야기이다.' },
+        { t: '햄릿', x: '너무 예전 영어라 읽기 힘들다. 설마 이 대본집 초판인가? 뒤집어 보니 셰익스피어의 사인이 있다.' },
+        { t: '실낙원', x: '앞부분이 유독 많이 읽은 듯 낡아 있다.' },
+        { t: '신곡', x: '페이지에 흘려 적은 코멘트가 여기저기 달려 있다.' }
+      ] },
+      { name: '판타지', books: [
+        { x: '선택받은 아이가 어둠의 마왕과 싸우는 내용이다.' },
+        { x: '뱀파이어 로맨스 소설이다. 거의 새 것 같다.' },
+        { x: '천사와 악마가 종말을 막으려고 노력하는 내용이다. 어쩐지 악마 묘사가 친숙하다.' },
+        { x: '반지 하나를 위해 멀리까지 모험을 떠나는 내용이다.' },
+        { x: '생각 많은 뱀파이어가 나온다. 삶과 죽음, 신에 대한 고찰이 특징이다.' },
+        { x: '눈에 모래를 뿌려 아이들을 잠들게 하는 샌드맨과 꿈결에 관한 내용이다.' }
+      ] },
+      { name: '가드닝', books: [
+        { x: '식물과 대화할 수 있다는 내용이다. 식물과 교감하라는데, 아무래도 안 읽은 거겠지?' },
+        { x: '가지치기와 분갈이에 관한 전문서이다.' },
+        { x: '습한 곳에서 기를 수 있는 식물들에 대해 적혀 있다.' },
+        { x: '푸릇하고 신선하게 식물을 기르는 법에 대한 내용이다.' }
+      ] },
+      { name: 'SF', books: [
+        { x: '파란 상자를 타고 모험을 떠나는 타임로드 이야기이다.' },
+        { x: '화성에 떨어져 감자를 키우는 이야기이다.' },
+        { x: '우주에서 외계인을 만나 지구를 구하는 과학자 이야기이다.' },
+        { x: '외계 생명체의 언어와 사고를 깨닫는 언어학자 이야기이다.' },
+        { x: '에이리언과 안드로이드 이야기가 있다.' }
+      ] },
+      { name: '오컬트', books: [
+        { x: '아그네스 너터의 근사하고 정확한 예언집이라고 적혀 있었지만, 내용이 없다. 구할 수 없는 모양이다.' },
+        { x: '타로점에 대한 내용이다. 어렵다.' },
+        { x: '새까만 가죽으로 된 불길한 책이다. 읽으려고 하자 크롤리가 뺏어갔다.', free: true },
+        { x: '세상에 존재하는 환상동물에 대한 도감이다.' },
+        { x: '현대 마법과 사탄학에 대해 정리한 논문이다.' }
+      ] }
+    ],
+    noSeat: '읽을 자리가 없다. 누군가 책을 덮을 때까지 기다려야 한다.',
+    catBusy: '그 코너는 지금 누군가 읽고 있다.',
+    pickCat: '읽을 분야를 골라 주세요.',
+    needName: '이름을 적어 주세요.',
+    race: '방금 다른 누군가가 먼저 읽기 시작했다.',
+    closed: '책을 덮었다.',
+    cant: '지금은 읽을 수 없어요.',
+    notReady: '책 읽기는 아직 준비 중이에요.'
+  },
   knock: '지금까지 모두 합쳐서 {n}번 두드렸다.',
   marker: {
     winLabel: '당첨!',
@@ -578,6 +674,7 @@ var CONTENT = {
       guest:  { cap: 1, n: 1 },
       board:  { cap: 1, n: 1 },
       sofa:   { cap: 1, n: 1 },
+      book:   { cap: 1, n: 1 },
       cereal: { cap: 1, n: 1 },
       coffee: { cap: 1, n: 1 },
       walk:   { cap: 3, n: 1 },
@@ -970,6 +1067,7 @@ function mountEntry(body){
     obj('문 앞 메모', doorBox()),
     obj('현관에 놓인 것', h('p',{class:'flavor'}, shoesNow().join(', ') + '.')),
     obj('오늘의 기분', moodBox()),
+    obj('기분 구슬', marbleBox()),
     obj('방명록', guestbookBox())
   );
 }
@@ -986,7 +1084,8 @@ function mountLiving(body){
     obj('마커판', markerBox()),
     obj('소파', sofaBox('sofa'),
       h('div',{class:'subsofa'}, h('div',{class:'fcap'}, '1인용 소파 1'), sofaBox('sofa2')),
-      h('div',{class:'subsofa'}, h('div',{class:'fcap'}, '1인용 소파 2'), sofaBox('sofa3')))
+      h('div',{class:'subsofa'}, h('div',{class:'fcap'}, '1인용 소파 2'), sofaBox('sofa3'))),
+    obj('책 읽기', bookBox())
   );
   armScare();
 }
@@ -1299,7 +1398,7 @@ function mountKitchen(body){
     obj('냉장고 안', fridgeBox()),
     obj('식탁', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.')),
     obj('소화기', lineBox('소화기 살펴보기', CONTENT.extinguisher, '벽에 붙어 있다.')),
-    obj('찬장', ui.shelf),
+    obj('찬장', ui.shelf, cookieBox()),
     obj('싱크대', ui.sink)
   );
 }
@@ -1387,9 +1486,9 @@ function mountBack(body){ body.append(h('div',{class:'obj'}, descBox('블랙 타
 
 /* ===== 방 열고 닫기 ===== */
 var ROOMS = {
-  living:  { mount: mountLiving,  widgets:['tv','marker','sofa','sofa2','sofa3','vase'] },
-  entry:   { mount: mountEntry,   widgets:['guestbook','door','mood'] },
-  kitchen: { mount: mountKitchen, widgets:['board','fridge','pantry'] },
+  living:  { mount: mountLiving,  widgets:['tv','marker','sofa','sofa2','sofa3','vase','reading'] },
+  entry:   { mount: mountEntry,   widgets:['guestbook','door','mood','marbles'] },
+  kitchen: { mount: mountKitchen, widgets:['board','fridge','pantry','cookies'] },
   study:   { mount: mountStudy,   widgets:['knock'] },
   util:    { mount: mountUtil,    widgets:[] },
   front:   { mount: mountFront,   widgets:['candy'] },
@@ -1876,6 +1975,220 @@ function moodBox(){
   return h('div',{class:'tvwrap'}, h('div',{class:'mood'}, faceEl, labelEl, gear), nameI, whoEl);
 }
 
+/* ===== 쿠키 칸 (찬장): 5종 중 2종. 접시는 남지 않는다 ===== */
+var COOKIE_N = CONTENT.cookies.perSlot;
+S.cookies = null; S.marbles = null; S.reading = {};
+function cookiesOk(){ return !!(canShare && fs && !S.off.cookies); }
+var cookiesInit = false;
+function cookiesEnsure(){
+  if (cookiesInit || !cookiesOk()) return;
+  cookiesInit = true;
+  var two = pickN([0, 1, 2, 3, 4], 2);
+  setDoc(doc(fs, 'house', 'cookies'), { k1: two[0], n1: COOKIE_N, k2: two[1], n2: COOKIE_N }).catch(function(){});
+}
+async function cookieAct(fn){
+  if (!cookiesOk()) return false;
+  try {
+    var ref = doc(fs, 'house', 'cookies');
+    await runTransaction(fs, async function(tx){
+      var snap = await tx.get(ref);
+      if (!snap.exists()) throw new Error('nodoc');
+      var d = snap.data();
+      var next = fn({ k1: d.k1, n1: d.n1, k2: d.k2, n2: d.n2 });
+      if (!next) throw new Error('blocked');
+      tx.set(ref, next);
+    });
+    return true;
+  } catch(e){ return false; }
+}
+function cookieBox(){
+  var C = CONTENT.cookies;
+  var said = h('p',{class:'flavor','aria-live':'polite'});
+  var slot = h('div',{class:'slot'});
+  function cmeter(n){ return new Array(n + 1).join('●') + new Array(COOKIE_N - n + 1).join('○'); }
+  function again(){ if (widgets.cookies) widgets.cookies(); }
+  async function eat(i){
+    var kind = -1;
+    var ok = await cookieAct(function(d){ if (d['n' + i] < 1) return null; kind = d['k' + i]; d['n' + i]--; return d; });
+    said.textContent = ok ? C.kinds[kind].eat : CONTENT.pantry.fail; again();
+  }
+  async function refill(i, kind){
+    var other = i === 1 ? 'k2' : 'k1';
+    var ok = await cookieAct(function(d){ if (d['n' + i] !== 0 || d[other] === kind) return null; d['k' + i] = kind; d['n' + i] = COOKIE_N; return d; });
+    said.textContent = ok ? C.kinds[kind].name + C.refilled : CONTENT.pantry.fail; again();
+  }
+  widgets.cookies = function(){
+    var d = S.cookies;
+    if (!cookiesOk() || !d){
+      slot.replaceChildren(h('p',{class:'empty'}, cookiesOk() ? '쿠키 칸을 여는 중이에요.' : C.notReady));
+      return;
+    }
+    var kids = [h('div',{class:'sn'}, '쿠키 칸')];
+    [1, 2].forEach(function(i){
+      var n = d['n' + i], other = d[i === 1 ? 'k2' : 'k1'], kind = C.kinds[d['k' + i]];
+      var sub = [h('div',{class:'sn'}, kind ? kind.name : '')];
+      if (n > 0){
+        sub.push(h('div',{class:'meter','aria-label':'남은 개수 ' + n}, cmeter(n)));
+        sub.push(h('button',{class:'btn',type:'button',onclick:function(){ eat(i); }}, '먹기'));
+      } else {
+        sub.push(h('p',{class:'empty'}, C.empty));
+        sub.push(h('div',{class:'row'}, C.kinds.map(function(x, ki){
+          return ki === other ? null : h('button',{class:'btn',type:'button',onclick:function(){ refill(i, ki); }}, x.name);
+        })));
+      }
+      kids.push(h('div',{class:'subslot'}, sub));
+    });
+    slot.replaceChildren.apply(slot, kids);
+  };
+  widgets.cookies();
+  cookiesEnsure();
+  return h('div',{class:'tvwrap',style:'width:100%'}, h('div',{class:'shelf'}, slot), said);
+}
+
+/* ===== 기분 구슬 (현관): 하루에 한 사람이 2개, 병 6개. 모인 수는 모두에게 보인다. 하루 2개 제한은 이 브라우저 기준 ===== */
+function dayNum(){ return Number(todayKST().replace(/-/g, '')); }
+function marbleLeft(){
+  var m = lsGet('crowley.marbles', null);
+  var used = (m && m.day === todayKST()) ? (Number(m.used) || 0) : 0;
+  return Math.max(0, CONTENT.marbles.perDay - used);
+}
+function marbleUse(){
+  var m = lsGet('crowley.marbles', null);
+  var used = (m && m.day === todayKST()) ? (Number(m.used) || 0) : 0;
+  lsSet('crowley.marbles', { day: todayKST(), used: used + 1 });
+}
+function marbleCounts(){
+  var d = S.marbles, out = [0, 0, 0, 0, 0, 0];
+  if (d && d.d === dayNum()){ for (var i = 0; i < 6; i++) out[i] = Number(d['j' + i]) || 0; }
+  return out;
+}
+async function marblePut(i){
+  if (!(canShare && fs) || S.off.marbles) return false;
+  var ref = doc(fs, 'house', 'marbles'), dn = dayNum(), k = 'j' + i;
+  async function bumpIt(){ var p = {}; p[k] = increment(1); await updateDoc(ref, p); }
+  async function resetIt(){ var o = { d: dn }; for (var j = 0; j < 6; j++) o['j' + j] = (j === i ? 1 : 0); await setDoc(ref, o); }
+  var same = !!(S.marbles && S.marbles.d === dn);
+  try { await (same ? bumpIt() : resetIt()); return true; }
+  catch(e){
+    try { await (same ? resetIt() : bumpIt()); return true; }
+    catch(e2){ return false; }
+  }
+}
+function marbleBox(){
+  var C = CONTENT.marbles;
+  var said = h('p',{class:'flavor','aria-live':'polite'});
+  var left = h('p',{class:'hint'});
+  var grid = h('div',{class:'jars'});
+  var lastJar = -1, putting = false;
+  async function put(i){
+    if (putting || marbleLeft() < 1) return;
+    putting = true;
+    var ok = await marblePut(i);
+    putting = false;
+    if (ok){ marbleUse(); lastJar = i; said.textContent = C.jars[i].put; } else { said.textContent = C.fail; }
+    if (widgets.marbles) widgets.marbles();
+  }
+  widgets.marbles = function(){
+    var off = !(canShare && fs) || S.off.marbles;
+    var cnt = marbleCounts(), n = marbleLeft(), fresh = lastJar;
+    left.textContent = off ? C.notReady : (n > 0 ? C.left.replace('{n}', String(n)) : C.done);
+    grid.replaceChildren.apply(grid, C.jars.map(function(j, i){
+      var dots = [], shown = Math.min(cnt[i], 16);
+      for (var k = 0; k < shown; k++) dots.push(h('i',{class:'mb' + (i === fresh && k === shown - 1 ? ' new' : '')}));
+      return h('button',{class:'jarbtn',type:'button',disabled: off || n < 1,'aria-label': j.name + ' 병에 구슬 넣기, 지금 ' + cnt[i] + '개',style:'--jc:' + j.color,onclick:function(){ put(i); }},
+        h('span',{class:'jar'}, dots), h('span',{class:'sn'}, j.name + ' ' + cnt[i]));
+    }));
+    if (fresh >= 0) setTimeout(function(){ if (lastJar === fresh) lastJar = -1; }, 1000);
+  };
+  widgets.marbles();
+  var tick = setInterval(function(){
+    if (!grid.isConnected){ clearInterval(tick); return; }
+    if (widgets.marbles) widgets.marbles();
+  }, 30000);
+  return h('div',{class:'tvwrap',style:'width:100%'}, left, grid, said);
+}
+
+/* ===== 책 읽기 (거실): 분야마다 한 사람, 전체 3명까지. 책은 읽기 시작할 때 랜덤으로 정해진다 ===== */
+function readState(c){
+  var d = S.reading[c];
+  if (!d || typeof d.start !== 'number') return null;
+  var left = d.start + (d.mins === 30 ? 30 : 15) * 60000 - Date.now();
+  if (d.rel || left <= 0) return null;
+  return { who: d.who, uid: d.uid, left: left, b: d.b };
+}
+function readingCount(){ var n = 0; for (var c = 0; c < CONTENT.books.cats.length; c++){ if (readState(c)) n++; } return n; }
+function myReading(){
+  var me = myUid();
+  if (!me) return null;
+  for (var c = 0; c < CONTENT.books.cats.length; c++){ var st = readState(c); if (st && st.uid === me) return { c: c, st: st }; }
+  return null;
+}
+function bookLine(bk){ return bk.t ? '『' + bk.t + '』: ' + bk.x : bk.x; }
+function bookBox(){
+  var B = CONTENT.books;
+  var cat = -1, msg = '', wasMine = false;
+  var said = h('p',{class:'readline','aria-live':'polite'});
+  var status = h('p',{class:'hint'});
+  var chips = h('div',{class:'chips'});
+  var nameI = h('input',{type:'text',maxlength:'12',placeholder:'이름',autocomplete:'off','aria-label':'읽을 사람 이름'});
+  async function start(mins){
+    var who = nameI.value.trim().replace(/\s+/g, ' ');
+    if (myReading()) return;
+    if (cat < 0){ msg = B.pickCat; widgets.reading(); return; }
+    if (!who){ msg = B.needName; widgets.reading(); return; }
+    if (!(canShare && fs && !S.off.reading && N.authOk && myUid())){ msg = B.cant; widgets.reading(); return; }
+    if (readingCount() >= B.seats){ msg = B.noSeat; widgets.reading(); return; }
+    if (readState(cat)){ msg = B.catBusy; widgets.reading(); return; }
+    var books = B.cats[cat].books, bi = Math.floor(Math.random() * books.length), bk = books[bi];
+    if (bk.free){ msg = bk.x; nameI.value = ''; widgets.reading(); return; }
+    try {
+      await setDoc(doc(fs, 'reading', String(cat)), { who: who.slice(0, 12), uid: myUid(), start: serverTimestamp(), rel: false, mins: mins, b: bi });
+      nameI.value = ''; msg = '';
+      candyTry('book');
+    } catch(err){ msg = B.race; }
+    widgets.reading();
+  }
+  var b15 = h('button',{class:'btn',type:'button',onclick:function(){ start(15); }}, '잠깐 읽기 (15분)');
+  var b30 = h('button',{class:'btn',type:'button',onclick:function(){ start(30); }}, '읽기 (30분)');
+  var closeBtn = h('button',{class:'btn',type:'button',onclick:async function(){
+    var mine = myReading();
+    if (!mine) return;
+    try { await updateDoc(doc(fs, 'reading', String(mine.c)), { rel: true }); } catch(err){}
+  }}, '책 덮기');
+  var startRow = h('div',{class:'row'}, nameI, b15, b30);
+  widgets.reading = function(){
+    var off = !(canShare && fs) || S.off.reading;
+    if (off){
+      chips.hidden = true; startRow.hidden = true; closeBtn.hidden = true;
+      said.textContent = ''; status.textContent = B.notReady;
+      return;
+    }
+    var mine = myReading(), n = readingCount();
+    if (cat >= 0 && readState(cat)) cat = -1;
+    chips.hidden = !!mine; startRow.hidden = !!mine; closeBtn.hidden = !mine;
+    chips.replaceChildren.apply(chips, B.cats.map(function(c, i){
+      var st = readState(i);
+      return h('button',{class:'btn chip',type:'button','aria-pressed': String(cat === i),disabled: !!st,onclick:function(){ cat = i; msg = ''; widgets.reading(); }},
+        c.name + (st ? ' · ' + st.who : ''));
+    }));
+    if (mine){
+      var m = Math.floor(mine.st.left / 60000), sec = Math.floor((mine.st.left % 60000) / 1000);
+      said.textContent = bookLine(B.cats[mine.c].books[mine.st.b] || B.cats[mine.c].books[0]) + ' (남은 시간 ' + m + ':' + (sec < 10 ? '0' : '') + sec + ')';
+      wasMine = true;
+    } else {
+      if (wasMine){ msg = B.closed; wasMine = false; }
+      said.textContent = msg;
+    }
+    status.textContent = '읽는 자리 ' + n + '/' + B.seats;
+  };
+  widgets.reading();
+  var tick = setInterval(function(){
+    if (!said.isConnected){ clearInterval(tick); return; }
+    if (widgets.reading) widgets.reading();
+  }, 1000);
+  return h('div',{class:'tvwrap',style:'width:100%'}, chips, startRow, closeBtn, said, status);
+}
+
 /* ===== 칭찬과 고발 노트 ===== */
 var auth = null;
 var N = { notes: [], votes: [], week: '', unsubs: [], open: false, authOk: false, kind: 'good', err: '' };
@@ -2291,6 +2604,21 @@ try {
     }
     redraw('mood');
   }, featureOff('mood'));
+  onSnapshot(doc(fs, 'house', 'cookies'), function(snap){
+    S.cookies = snap.exists() ? snap.data() : null;
+    if (!snap.exists()) cookiesEnsure();
+    redraw('cookies');
+  }, featureOff('cookies'));
+  onSnapshot(doc(fs, 'house', 'marbles'), function(snap){ S.marbles = snap.exists() ? snap.data() : null; redraw('marbles'); }, featureOff('marbles'));
+  [0, 1, 2, 3, 4].forEach(function(c){
+    onSnapshot(doc(fs, 'reading', String(c)), function(snap){
+      if (!snap.exists()){ S.reading[c] = null; } else {
+        var x = snap.data({ serverTimestamps: 'estimate' });
+        S.reading[c] = { who: x.who, uid: x.uid, start: tsMs(x.start), rel: !!x.rel, mins: x.mins === 30 ? 30 : 15, b: Number(x.b) || 0 };
+      }
+      redraw('reading');
+    }, featureOff('reading'));
+  });
   onSnapshot(doc(fs, 'house', 'candy'), function(snap){ S.candy = snap.exists() ? snap.data() : null; redraw('candy'); }, featureOff('candy'));
   onSnapshot(doc(fs, 'house', 'knock'), function(snap){ S.knock = snap.exists() ? snap.data() : null; redraw('knock'); }, featureOff('knock'));
   onSnapshot(doc(fs, 'house', 'fridgeStats'), function(snap){ S.fridgeStats = snap.exists() ? snap.data() : null; redraw('fridge'); }, featureOff('fridgeStats'));
