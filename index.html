@@ -237,6 +237,27 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 @media (prefers-reduced-motion:reduce){ .mb.new{animation:none} }
 .subslot{border-top:1px dashed var(--line); padding-top:6px; display:grid; gap:6px}
 .readline{margin:0; font-family:var(--f-disp)}
+.seats{display:flex; align-items:center; gap:8px}
+.seatdots{display:flex; gap:4px}
+.seat{display:block; width:10px; height:10px; border-radius:50%; border:1.5px solid var(--line); box-sizing:border-box}
+.seat.on{background:var(--crimson); border-color:var(--crimson)}
+.bkcards{width:100%; display:grid; gap:6px}
+.bkcard{display:grid; gap:2px; justify-items:start; width:100%; min-width:0; text-align:left; padding:9px 12px; font:inherit; color:inherit;
+  background:var(--room-deep); border:1px solid var(--line); border-left:4px solid var(--line); border-radius:3px}
+button.bkcard{cursor:pointer}
+button.bkcard:hover{border-color:var(--teal); border-left-color:var(--teal)}
+.bkcard.occ{border-left-color:var(--teal)}
+.bkcard.sel,.bkcard.mine{border-color:var(--crimson); border-left-color:var(--crimson)}
+.bkhead{display:flex; justify-content:space-between; align-items:baseline; gap:8px; width:100%}
+.bkname{font-family:var(--f-disp); font-weight:700; font-size:15px}
+.bktag{font-size:12px; color:var(--teal)}
+.bkcard.sel .bktag,.bkcard.mine .bktag{color:var(--crimson)}
+.bkline{display:block; font-size:13px; line-height:1.5; overflow-wrap:anywhere}
+.bkline.dim{color:var(--muted)}
+.bkline b{font-weight:500; color:var(--note)}
+.bkbook{font-family:var(--f-disp); font-size:14px; line-height:1.6}
+.bktime{display:block; font-size:12px; color:var(--muted)}
+.bkcard .btn{margin-top:6px}
 
 /* 이주의 객식구, 칭찬과 고발 노트 */
 .weekly{display:grid; gap:2px; margin:6px 0 10px; font-size:14px}
@@ -370,7 +391,7 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-19)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-20)</p>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
@@ -606,7 +627,7 @@ var CONTENT = {
   books: {
     seats: 3,
     cats: [
-      { name: '고전 소설', books: [
+      { name: '고전 소설', taken: '님이 낡은 책장을 넘기고 있다.', free: '비어 있다. 오래된 종이 냄새만 남아 있다.', books: [
         { t: '오만과 편견', x: '앞에 메모가 하나 있다. 제인 오스틴이 작가였다니, 놀랄 일이야.' },
         { t: '프랑켄슈타인', x: '어쩐지 다른 판본보다 크리쳐 시점이 더 자세한 것 같다. 착각일까?' },
         { t: '작은 아씨들', x: '네 자매가 다투고 웃으며 자라는 이야기이다.' },
@@ -614,7 +635,7 @@ var CONTENT = {
         { t: '실낙원', x: '앞부분이 유독 많이 읽은 듯 낡아 있다.' },
         { t: '신곡', x: '페이지에 흘려 적은 코멘트가 여기저기 달려 있다.' }
       ] },
-      { name: '판타지', books: [
+      { name: '판타지', taken: '님이 이야기 속에 푹 빠져 있다.', free: '비어 있다. 표지에 용 그림이 그려진 책들이 꽂혀 있다.', books: [
         { x: '선택받은 아이가 어둠의 마왕과 싸우는 내용이다.' },
         { x: '뱀파이어 로맨스 소설이다. 거의 새 것 같다.' },
         { x: '천사와 악마가 종말을 막으려고 노력하는 내용이다. 어쩐지 악마 묘사가 친숙하다.' },
@@ -622,20 +643,20 @@ var CONTENT = {
         { x: '생각 많은 뱀파이어가 나온다. 삶과 죽음, 신에 대한 고찰이 특징이다.' },
         { x: '눈에 모래를 뿌려 아이들을 잠들게 하는 샌드맨과 꿈결에 관한 내용이다.' }
       ] },
-      { name: '가드닝', books: [
+      { name: '가드닝', taken: '님이 책 사이에 메모를 끼워 가며 읽고 있다.', free: '비어 있다. 책장 옆 화분의 흙이 말라 있다.', books: [
         { x: '식물과 대화할 수 있다는 내용이다. 식물과 교감하라는데, 아무래도 안 읽은 거겠지?' },
         { x: '가지치기와 분갈이에 관한 전문서이다.' },
         { x: '습한 곳에서 기를 수 있는 식물들에 대해 적혀 있다.' },
         { x: '푸릇하고 신선하게 식물을 기르는 법에 대한 내용이다.' }
       ] },
-      { name: 'SF', books: [
+      { name: 'SF', taken: '님이 눈도 떼지 않고 읽고 있다.', free: '비어 있다. 책등의 은빛 글씨가 불빛에 반짝인다.', books: [
         { x: '파란 상자를 타고 모험을 떠나는 타임로드 이야기이다.' },
         { x: '화성에 떨어져 감자를 키우는 이야기이다.' },
         { x: '우주에서 외계인을 만나 지구를 구하는 과학자 이야기이다.' },
         { x: '외계 생명체의 언어와 사고를 깨닫는 언어학자 이야기이다.' },
         { x: '에이리언과 안드로이드 이야기가 있다.' }
       ] },
-      { name: '오컬트', books: [
+      { name: '오컬트', taken: '님이 목소리를 낮추고 조용히 읽고 있다.', free: '비어 있다. 책장 안쪽이 유독 어둡다.', books: [
         { x: '아그네스 너터의 근사하고 정확한 예언집이라고 적혀 있었지만, 내용이 없다. 구할 수 없는 모양이다.' },
         { x: '타로점에 대한 내용이다. 어렵다.' },
         { x: '새까만 가죽으로 된 불길한 책이다. 읽으려고 하자 크롤리가 뺏어갔다.', free: true },
@@ -2126,10 +2147,12 @@ function myReading(){
 function bookLine(bk){ return bk.t ? '『' + bk.t + '』: ' + bk.x : bk.x; }
 function bookBox(){
   var B = CONTENT.books;
-  var cat = -1, msg = '', wasMine = false;
+  var cat = -1, msg = '', wasMine = false, lastSig = '', timeEls = {};
   var said = h('p',{class:'readline','aria-live':'polite'});
-  var status = h('p',{class:'hint'});
-  var chips = h('div',{class:'chips'});
+  var seatDots = h('span',{class:'seatdots','aria-hidden':'true'});
+  var seatTxt = h('span',{class:'hint'});
+  var seats = h('div',{class:'seats'}, seatDots, seatTxt);
+  var corners = h('div',{class:'bkcards'});
   var nameI = h('input',{type:'text',maxlength:'12',placeholder:'이름',autocomplete:'off','aria-label':'읽을 사람 이름'});
   async function start(mins){
     var who = nameI.value.trim().replace(/\s+/g, ' ');
@@ -2156,37 +2179,66 @@ function bookBox(){
     try { await updateDoc(doc(fs, 'reading', String(mine.c)), { rel: true }); } catch(err){}
   }}, '책 덮기');
   var startRow = h('div',{class:'row'}, nameI, b15, b30);
+  function clock(left){ var m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000); return m + ':' + (sec < 10 ? '0' : '') + sec; }
+  function tickTimes(){
+    Object.keys(timeEls).forEach(function(i){
+      var st = readState(Number(i));
+      if (st) timeEls[i].textContent = '남은 시간 ' + clock(st.left);
+    });
+  }
   widgets.reading = function(){
     var off = !(canShare && fs) || S.off.reading;
     if (off){
-      chips.hidden = true; startRow.hidden = true; closeBtn.hidden = true;
-      said.textContent = ''; status.textContent = B.notReady;
+      seats.hidden = true; corners.hidden = true; startRow.hidden = true;
+      said.textContent = B.notReady; lastSig = 'off';
       return;
     }
     var mine = myReading(), n = readingCount();
     if (cat >= 0 && readState(cat)) cat = -1;
-    chips.hidden = !!mine; startRow.hidden = !!mine; closeBtn.hidden = !mine;
-    chips.replaceChildren.apply(chips, B.cats.map(function(c, i){
-      var st = readState(i);
-      return h('button',{class:'btn chip',type:'button','aria-pressed': String(cat === i),disabled: !!st,onclick:function(){ cat = i; msg = ''; widgets.reading(); }},
-        c.name + (st ? ' · ' + st.who : ''));
+    var states = B.cats.map(function(c, i){ return readState(i); });
+    var sig = JSON.stringify([states.map(function(st){ return st ? [st.who, st.uid, st.b] : 0; }), cat, mine ? mine.c : -1, msg, wasMine]);
+    if (sig === lastSig){ tickTimes(); return; }
+    lastSig = sig;
+    seats.hidden = false; corners.hidden = false; startRow.hidden = !!mine;
+    var dots = [];
+    for (var d = 0; d < B.seats; d++) dots.push(h('i',{class:'seat' + (d < n ? ' on' : '')}));
+    seatDots.replaceChildren.apply(seatDots, dots);
+    seatTxt.textContent = '읽는 자리 ' + n + '/' + B.seats;
+    timeEls = {};
+    corners.replaceChildren.apply(corners, B.cats.map(function(c, i){
+      var st = states[i], isMine = !!(mine && mine.c === i), sel = !mine && cat === i;
+      var cls = 'bkcard' + (st ? ' occ' : '') + (isMine ? ' mine' : '') + (sel ? ' sel' : '');
+      var tag = isMine ? '내가 읽는 중' : st ? '읽는 중' : sel ? '고른 분야' : '';
+      var kids = [h('span',{class:'bkhead'}, h('span',{class:'bkname'}, c.name), h('span',{class:'bktag'}, tag))];
+      if (st){
+        var tEl = h('span',{class:'bktime'}, '남은 시간 ' + clock(st.left));
+        timeEls[i] = tEl;
+        if (isMine){
+          kids.push(h('span',{class:'bkline bkbook'}, bookLine(c.books[st.b] || c.books[0])));
+          kids.push(tEl);
+          kids.push(closeBtn);
+        } else {
+          kids.push(h('span',{class:'bkline'}, h('b', null, st.who), c.taken));
+          kids.push(tEl);
+        }
+      } else {
+        kids.push(h('span',{class:'bkline dim'}, c.free));
+      }
+      if (st || mine) return h('div',{class:cls}, kids);
+      return h('button',{class:cls,type:'button','aria-pressed': String(sel),onclick:function(){ cat = i; msg = ''; widgets.reading(); }}, kids);
     }));
-    if (mine){
-      var m = Math.floor(mine.st.left / 60000), sec = Math.floor((mine.st.left % 60000) / 1000);
-      said.textContent = bookLine(B.cats[mine.c].books[mine.st.b] || B.cats[mine.c].books[0]) + ' (남은 시간 ' + m + ':' + (sec < 10 ? '0' : '') + sec + ')';
-      wasMine = true;
-    } else {
-      if (wasMine){ msg = B.closed; wasMine = false; }
+    if (mine){ wasMine = true; said.textContent = ''; }
+    else {
+      if (wasMine){ msg = B.closed; wasMine = false; lastSig = ''; }
       said.textContent = msg;
     }
-    status.textContent = '읽는 자리 ' + n + '/' + B.seats;
   };
   widgets.reading();
   var tick = setInterval(function(){
     if (!said.isConnected){ clearInterval(tick); return; }
     if (widgets.reading) widgets.reading();
   }, 1000);
-  return h('div',{class:'tvwrap',style:'width:100%'}, chips, startRow, closeBtn, said, status);
+  return h('div',{class:'tvwrap',style:'width:100%'}, seats, corners, startRow, said);
 }
 
 /* ===== 칭찬과 고발 노트 ===== */
