@@ -391,7 +391,7 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-20)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-22)</p>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
@@ -573,11 +573,20 @@ var CONTENT = {
   pantry: {
     coffee: { coffee: '커피', cocoa: '코코아' },
     cereals: { c1: '초코 시리얼', c2: '콘플레이크', c3: '그래놀라', c4: '허니 시리얼' },
+    jams: { j1: '딸기잼', j2: '블루베리잼', j3: '오렌지 마멀레이드', j4: '무화과잼', j5: '살구잼' },
     eat: {
       coffee: ['따뜻한 커피를 한 잔 내렸다.', '진하다. 잠이 달아난다.'],
       cocoa: ['코코아를 한 잔 탔다. 달다.', '마시멜로가 없어서 조금 아쉽다.'],
-      cereal: ['그릇에 한가득 담아 먹었다.', '우유가 어딘가에 있었던 것 같다.']
+      cereal: ['그릇에 한가득 담아 먹었다.', '우유가 어딘가에 있었던 것 같다.'],
+      jam: {
+        j1: '식빵에 딸기잼을 듬뿍 발랐다. 가장자리로 흘러내린다.',
+        j2: '블루베리잼을 발랐다. 입술이 살짝 보라색이 됐다.',
+        j3: '마멀레이드의 쌉쌀한 껍질이 씹힌다. 어른의 맛이다.',
+        j4: '무화과잼의 알갱이가 톡톡 씹힌다.',
+        j5: '살구잼을 얇게 펴 발랐다. 은은하게 새콤하다.'
+      }
     },
+    knife: ' 잼 나이프는 싱크대에 넣어 두었다.',
     wash: '컵과 그릇을 말끔히 씻어 엎어 두었다.',
     washing: '설거지 중…',
     washGone: '이미 누군가 씻어 놨다.',
@@ -604,7 +613,23 @@ var CONTENT = {
     ],
     empty: '다 떨어졌다. 채울 걸 골라 주세요.',
     refilled: '을(를) 채워 넣었다.',
+    title: '쿠키 칸',
     notReady: '쿠키 칸은 아직 준비 중이에요.'
+  },
+  /* 찬장 아래 간식 칸: 서로 다른 초콜릿 바 5종 중 2종, 종류마다 5개 */
+  snacks: {
+    perSlot: 5,
+    title: '간식 칸',
+    kinds: [
+      { name: '밀크초콜릿 바', eat: '반으로 쪼개 먹었다. 쪼개지는 소리가 상쾌하다.' },
+      { name: '다크초콜릿 바', eat: '쌉쌀한 맛이 오래 남는다. 한 조각이면 충분하다.' },
+      { name: '헤이즐넛 초콜릿 바', eat: '헤이즐넛이 통째로 씹힌다. 고소하다.' },
+      { name: '캐러멜 초콜릿 바', eat: '캐러멜이 길게 늘어난다. 손가락에 달라붙는다.' },
+      { name: '민트초콜릿 바', eat: '입안이 확 시원해진다. 치약 같다는 사람도 있다.' }
+    ],
+    empty: '다 떨어졌다. 채울 걸 골라 주세요.',
+    refilled: '을(를) 채워 넣었다.',
+    notReady: '간식 칸은 아직 준비 중이에요.'
   },
   /* 기분 구슬: 하루(한국 시간)에 한 사람이 perDay개, 병 6개 */
   marbles: {
@@ -672,6 +697,23 @@ var CONTENT = {
     closed: '책을 덮었다.',
     cant: '지금은 읽을 수 없어요.',
     notReady: '책 읽기는 아직 준비 중이에요.'
+  },
+  table: {
+    seats: 3, mins: 20,
+    free: '비어 있는 의자.',
+    sit: '의자를 당겨 앉았다.',
+    up: '의자를 밀어 넣고 일어났다.',
+    noSeat: '앉을 의자가 없다. 세 자리가 모두 차 있다.',
+    needName: '이름을 적어 주세요.',
+    race: '방금 다른 누군가가 그 의자에 앉았다.',
+    cant: '지금은 앉을 수 없어요.',
+    empty: '식탁 위가 말끔하다.',
+    sharing: '{names} — {food} 한 접시를 나눠 먹고 있다.',
+    put: ' 식탁 위에 올려 두었다.',
+    busy: '식탁에는 이미 접시가 놓여 있다.',
+    fail: '지금은 식탁에 올릴 수 없어요.',
+    cleared: '접시가 치워졌다.',
+    notReady: '식탁 자리는 아직 준비 중이에요.'
   },
   knock: '지금까지 모두 합쳐서 {n}번 두드렸다.',
   marker: {
@@ -1195,6 +1237,129 @@ async function dropOne(i, left){
   S.fridgeUser = Object.assign({}, S.fridgeUser || {}, q);
   return true;
 }
+/* ===== 식탁: 자리 3칸(20분)과 함께 나눠 먹는 접시 1개 ===== */
+var TABLE_MS = 20 * 60000;
+function tseatState(i){
+  var d = S.tseat[i];
+  if (!d || typeof d.start !== 'number') return null;
+  var left = d.start + TABLE_MS - Date.now();
+  if (d.rel || left <= 0) return null;
+  return { who: d.who, uid: d.uid, start: d.start, left: left };
+}
+function tableMine(){
+  var me = myUid();
+  if (!me) return -1;
+  for (var i = 0; i < CONTENT.table.seats; i++){ var st = tseatState(i); if (st && st.uid === me) return i; }
+  return -1;
+}
+function tableCount(){ var n = 0; for (var i = 0; i < CONTENT.table.seats; i++){ if (tseatState(i)) n++; } return n; }
+/* 접시는 누군가 앉아 있는 동안 보인다. 올릴 때 앉아 있던 사람이 모두 일어났으면 새 접시로 바꿀 수 있다(alive=false) */
+function tplateState(){
+  var p = S.tplate;
+  if (!p || p.gone || typeof p.at !== 'number' || p.at + TABLE_MS <= Date.now()) return null;
+  var names = [], alive = false;
+  for (var i = 0; i < CONTENT.table.seats; i++){ var st = tseatState(i); if (st){ names.push(st.who); if (st.start <= p.at) alive = true; } }
+  if (!names.length) return null;
+  return { food: p.food, names: names, alive: alive };
+}
+function tableOk(){ return !!(canShare && fs && !S.off.table); }
+async function tablePlace(food){
+  var mine = tableMine();
+  if (mine < 0 || !tableOk() || !N.authOk) return false;
+  try {
+    await setDoc(doc(fs, 'table', 'plate'), { food: String(food).slice(0, 40), who: tseatState(mine).who, uid: myUid(), at: serverTimestamp(), gone: false });
+    return true;
+  } catch(e){ return false; }
+}
+function tableBox(){
+  var T = CONTENT.table;
+  var msg = '', lastSig = '', timeEls = {}, hadPlate = false;
+  var said = h('p',{class:'flavor','aria-live':'polite'});
+  var msgP = h('p',{class:'hint','aria-live':'polite'});
+  var seatDots = h('span',{class:'seatdots','aria-hidden':'true'});
+  var seatTxt = h('span',{class:'hint'});
+  var seats = h('div',{class:'seats'}, seatDots, seatTxt);
+  var cards = h('div',{class:'bkcards'});
+  var nameI = h('input',{type:'text',maxlength:'12',placeholder:'이름',autocomplete:'off','aria-label':'앉을 사람 이름'});
+  function clock(left){ var m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000); return m + ':' + (sec < 10 ? '0' : '') + sec; }
+  async function sit(){
+    var who = nameI.value.trim().replace(/\s+/g, ' ');
+    if (tableMine() >= 0) return;
+    if (!who){ msg = T.needName; widgets.table(); return; }
+    if (!(tableOk() && N.authOk && myUid())){ msg = T.cant; widgets.table(); return; }
+    var free = -1;
+    for (var i = 0; i < T.seats; i++){ if (!tseatState(i)){ free = i; break; } }
+    if (free < 0){ msg = T.noSeat; widgets.table(); return; }
+    try {
+      await setDoc(doc(fs, 'table', 'seat' + free), { who: who.slice(0, 12), uid: myUid(), start: serverTimestamp(), rel: false });
+      nameI.value = ''; msg = T.sit;
+    } catch(err){ msg = T.race; }
+    widgets.table();
+  }
+  async function leave(){
+    var mine = tableMine();
+    if (mine < 0) return;
+    try {
+      if (tplateState() && tableCount() <= 1) await updateDoc(doc(fs, 'table', 'plate'), { gone: true });
+    } catch(err){}
+    try { await updateDoc(doc(fs, 'table', 'seat' + mine), { rel: true }); msg = T.up; } catch(err){}
+    widgets.table();
+  }
+  var sitBtn = h('button',{class:'btn',type:'submit'},'앉기');
+  var upBtn = h('button',{class:'btn',type:'button',onclick:leave},'일어나기');
+  var form = h('form',{class:'row',onsubmit:function(e){ e.preventDefault(); sit(); }}, nameI, sitBtn);
+  function tickTimes(){
+    Object.keys(timeEls).forEach(function(i){
+      var st = tseatState(Number(i));
+      if (st) timeEls[i].textContent = '남은 시간 ' + clock(st.left);
+    });
+  }
+  widgets.table = function(){
+    if (!tableOk()){
+      seats.hidden = true; cards.hidden = true; form.hidden = true; upBtn.hidden = true;
+      msgP.textContent = T.notReady; said.textContent = ''; lastSig = 'off';
+      return;
+    }
+    var mine = tableMine(), n = tableCount(), pl = tplateState();
+    var states = []; for (var i = 0; i < T.seats; i++) states.push(tseatState(i));
+    var sig = JSON.stringify([states.map(function(st){ return st ? [st.who, st.uid] : 0; }), mine, msg, pl ? [pl.food, pl.names] : 0, N.authOk]);
+    if (sig === lastSig){ tickTimes(); return; }
+    lastSig = sig;
+    seats.hidden = false; cards.hidden = false; form.hidden = mine >= 0; upBtn.hidden = mine < 0;
+    sitBtn.disabled = !N.authOk;
+    var dots = [];
+    for (var d = 0; d < T.seats; d++) dots.push(h('i',{class:'seat' + (d < n ? ' on' : '')}));
+    seatDots.replaceChildren.apply(seatDots, dots);
+    seatTxt.textContent = '앉은 자리 ' + n + '/' + T.seats;
+    timeEls = {};
+    cards.replaceChildren.apply(cards, states.map(function(st, i){
+      var isMine = i === mine;
+      var tag = isMine ? '내 자리' : st ? '식사 중' : '';
+      var kids = [h('span',{class:'bkhead'}, h('span',{class:'bkname'}, '자리 ' + (i + 1)), h('span',{class:'bktag'}, tag))];
+      if (st){
+        kids.push(h('span',{class:'bkline'}, h('b', null, st.who)));
+        var tEl = h('span',{class:'bktime'}, '남은 시간 ' + clock(st.left));
+        timeEls[i] = tEl; kids.push(tEl);
+      } else {
+        kids.push(h('span',{class:'bkline dim'}, T.free));
+      }
+      return h('div',{class:'bkcard' + (st ? ' occ' : '') + (isMine ? ' mine' : '')}, kids);
+    }));
+    if (pl){ said.textContent = T.sharing.replace('{names}', pl.names.join(', ')).replace('{food}', pl.food); hadPlate = true; }
+    else {
+      if (hadPlate){ msg = msg || T.cleared; hadPlate = false; msgP.textContent = msg; }
+      said.textContent = T.empty;
+    }
+    msgP.textContent = msg;
+  };
+  widgets.table();
+  var tick = setInterval(function(){
+    if (!said.isConnected){ clearInterval(tick); return; }
+    if (widgets.table) widgets.table();
+  }, 1000);
+  return h('div',{class:'tvwrap',style:'width:100%'}, said, seats, cards, form, upBtn, msgP);
+}
+
 function fridgeBox(){
   var left = h('div',{class:'fcol'});
   var right = h('div',{class:'fcol'});
@@ -1224,25 +1389,40 @@ function fridgeBox(){
   async function takeLeft(i){
     var cur = slots().slice();
     var old = cur[i];
+    var onTable = false;
+    if (tableMine() >= 0){
+      var pl0 = tplateState();
+      if (pl0 && pl0.alive){ said.textContent = CONTENT.table.busy; return; }
+      if (!(await tablePlace(old))){ said.textContent = CONTENT.table.fail; return; }
+      onTable = true;
+    }
     var fresh = CONTENT.foods.filter(function(f){ return cur.indexOf(f) < 0; });
     var nf = pick(fresh.length ? fresh : CONTENT.foods);
     cur[i] = nf;
     await saveFridge(cur);
     bump('fridgeStats', 'out');
-    said.textContent = old + ' 꺼냄. 빈 자리에는 어느새 ' + nf + '.';
+    said.textContent = old + ' 꺼냄.' + (onTable ? CONTENT.table.put : '') + ' 빈 자리에는 어느새 ' + nf + '.';
     redraw('fridge');
   }
   async function takeRight(i){
     var cur = userSlots()[i], old = cur.n;
     if (!old) return;
+    var onTable = false;
+    if (tableMine() >= 0){
+      var pl0 = tplateState();
+      if (pl0 && pl0.alive){ said.textContent = CONTENT.table.busy; return; }
+      if (!(await tablePlace(old))){ said.textContent = CONTENT.table.fail; return; }
+      onTable = true;
+    }
+    var put = onTable ? CONTENT.table.put : '';
     if (cur.q > 1){
-      if (!(await dropOne(i, cur.q - 1))){ said.textContent = '잠시 후에 다시 해 주세요.'; return; }
+      if (!(await dropOne(i, cur.q - 1))){ said.textContent = '잠시 후에 다시 해 주세요.' + (onTable ? ' (접시는 이미 올라갔어요.)' : ''); return; }
       bump('fridgeStats', 'out');
-      said.textContent = old + ' 하나 꺼냄. (' + (cur.q - 1) + '개 남음)';
+      said.textContent = old + ' 하나 꺼냄.' + put + ' (' + (cur.q - 1) + '개 남음)';
     } else {
       await saveUserSlot(i, '');
       bump('fridgeStats', 'out');
-      said.textContent = old + ' 꺼냄.';
+      said.textContent = old + ' 꺼냄.' + put;
     }
     redraw('fridge');
   }
@@ -1417,9 +1597,9 @@ function mountKitchen(body){
   body.append(
     obj('냉장고 화이트보드', boardBox()),
     obj('냉장고 안', fridgeBox()),
-    obj('식탁', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.')),
+    obj('식탁', h('p',{class:'flavor'}, items.length ? '위에 ' + items.join(', ') + '.' : '위에는 아무것도 없다.'), tableBox()),
     obj('소화기', lineBox('소화기 살펴보기', CONTENT.extinguisher, '벽에 붙어 있다.')),
-    obj('찬장', ui.shelf, cookieBox()),
+    obj('찬장', ui.shelf, stockBox()),
     obj('싱크대', ui.sink)
   );
 }
@@ -1509,7 +1689,7 @@ function mountBack(body){ body.append(h('div',{class:'obj'}, descBox('블랙 타
 var ROOMS = {
   living:  { mount: mountLiving,  widgets:['tv','marker','sofa','sofa2','sofa3','vase','reading'] },
   entry:   { mount: mountEntry,   widgets:['guestbook','door','mood','marbles'] },
-  kitchen: { mount: mountKitchen, widgets:['board','fridge','pantry','cookies'] },
+  kitchen: { mount: mountKitchen, widgets:['board','fridge','pantry','cookies','snacks','table'] },
   study:   { mount: mountStudy,   widgets:['knock'] },
   util:    { mount: mountUtil,    widgets:[] },
   front:   { mount: mountFront,   widgets:['candy'] },
@@ -1850,7 +2030,14 @@ function sofaBox(id){
 
 /* 찬장과 싱크대: 한 문서를 모두가 같이 쓴다. 서버 규칙이 한 번에 한 칸씩만 줄고 늘게 한다 */
 function pantryDefaults(){ return { ck:'coffee', cn:PANTRY_N, s1k:'c1', s1n:PANTRY_N, s2k:'c2', s2n:PANTRY_N, cups:0, bowls:0 }; }
-function pantryPick(d){ var o = {}; ['ck','cn','s1k','s1n','s2k','s2n','cups','bowls'].forEach(function(k){ o[k] = d[k]; }); return o; }
+/* 잼 칸(jk, jn)과 잼 나이프(kn)는 나중에 붙은 필드라 옛 문서에는 없다. 없으면 기본값으로 보고, 바뀐 값만 서버에 쓴다 */
+function pantryPick(d){
+  var o = {}; ['ck','cn','s1k','s1n','s2k','s2n','cups','bowls'].forEach(function(k){ o[k] = d[k]; });
+  o.jk = (typeof d.jk === 'string' && CONTENT.pantry.jams[d.jk]) ? d.jk : 'j1';
+  o.jn = typeof d.jn === 'number' ? d.jn : PANTRY_N;
+  o.kn = Number(d.kn) || 0;
+  return o;
+}
 function pantryOk(){ return !!(canShare && fs && !S.off.pantry); }
 var pantryInit = false;
 function pantryEnsure(){
@@ -1865,9 +2052,12 @@ async function pantryAct(fn){
     await runTransaction(fs, async function(tx){
       var snap = await tx.get(ref);
       if (!snap.exists()) throw new Error('nodoc');
-      var next = fn(pantryPick(snap.data()));
+      var cur = pantryPick(snap.data());
+      var next = fn(Object.assign({}, cur));
       if (!next) throw new Error('blocked');
-      tx.set(ref, next);
+      var diff = {};
+      Object.keys(next).forEach(function(k){ if (next[k] !== cur[k]) diff[k] = next[k]; });
+      tx.update(ref, diff);
     });
     return true;
   } catch(e){ return false; }
@@ -1876,6 +2066,7 @@ function meter(n){ return new Array(n + 1).join('●') + new Array(PANTRY_N - n 
 function pantryUI(){
   var C = CONTENT.pantry;
   var said = h('p',{class:'flavor','aria-live':'polite'});
+  var sinkSaid = h('p',{class:'flavor','aria-live':'polite'});
   var shelf = h('div',{class:'shelf'});
   var sinkTxt = h('p',{class:'flavor'});
   var washFill = h('span',{class:'fill','aria-hidden':'true'});
@@ -1886,7 +2077,7 @@ function pantryUI(){
     var reduce = false;
     try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){}
     if (!reduce){
-      said.textContent = C.washing;
+      sinkSaid.textContent = C.washing;
       void washFill.offsetWidth;
       washBtn.classList.add('go');
       await new Promise(function(r){ setTimeout(r, 1000); });
@@ -1895,12 +2086,12 @@ function pantryUI(){
     washing = false;
     if (!washBtn.isConnected){ return; }
     var gone = false;
-    var ok = await pantryAct(function(d){ if (d.cups + d.bowls < 1){ gone = true; return null; } d.cups = 0; d.bowls = 0; return d; });
-    said.textContent = ok ? C.wash : (gone ? C.washGone : C.fail); redrawPantryText();
+    var ok = await pantryAct(function(d){ if (d.cups + d.bowls + d.kn < 1){ gone = true; return null; } d.cups = 0; d.bowls = 0; d.kn = 0; return d; });
+    sinkSaid.textContent = ok ? C.wash : (gone ? C.washGone : C.fail); redrawPantryText();
     if (ok) candyTry('wash');
   }}, washFill, h('span',{class:'lbl2'},'설거지하기'));
   function redrawPantryText(){ if (widgets.pantry) widgets.pantry(); }
-  function sinkFull(d){ return d.cups + d.bowls >= SINK_MAX; }
+  function sinkFull(d){ return d.cups + d.bowls + d.kn >= SINK_MAX; }
   function slotEl(title, kindName, n, eatLabel, onEat, optionBtns, d){
     var kids = [h('div',{class:'sn'}, title), h('div',{class:'sn'}, kindName)];
     if (n > 0){
@@ -1924,6 +2115,15 @@ function pantryUI(){
     said.textContent = ok ? pick(C.eat.cereal) : C.fail; redrawPantryText();
     if (ok) candyTry('cereal');
   }
+  async function eatJam(){
+    var kind = 'j1';
+    var ok = await pantryAct(function(d){ if (d.jn < 1 || sinkFull(d)) return null; kind = d.jk; d.jn--; d.kn++; return d; });
+    said.textContent = ok ? (C.eat.jam[kind] || '') + C.knife : C.fail; redrawPantryText();
+  }
+  async function refillJam(kind){
+    var ok = await pantryAct(function(d){ if (d.jn !== 0) return null; d.jk = kind; d.jn = PANTRY_N; return d; });
+    said.textContent = ok ? C.jams[kind] + '을(를) 채워 넣었다.' : C.fail; redrawPantryText();
+  }
   async function refillCoffee(kind){
     var ok = await pantryAct(function(d){ if (d.cn !== 0) return null; d.ck = kind; d.cn = PANTRY_N; return d; });
     said.textContent = ok ? C.coffee[kind] + '을(를) 채워 넣었다.' : C.fail; redrawPantryText();
@@ -1934,7 +2134,7 @@ function pantryUI(){
     said.textContent = ok ? C.cereals[kind] + '을(를) 채워 넣었다.' : C.fail; redrawPantryText();
   }
   widgets.pantry = function(){
-    var d = S.pantry;
+    var d = S.pantry ? pantryPick(S.pantry) : null;
     if (!pantryOk() || !d){
       shelf.replaceChildren(h('p',{class:'empty'}, pantryOk() ? '찬장을 여는 중이에요.' : '찬장은 아직 준비 중이에요.'));
       sinkTxt.textContent = ''; washBtn.hidden = true;
@@ -1950,15 +2150,17 @@ function pantryUI(){
       });
       slots.push(slotEl('시리얼 칸 ' + i, C.cereals[d['s'+i+'k']] || '', d['s'+i+'n'], '먹기', function(){ eatCereal(i); }, opts, d));
     });
+    var jamOpts = Object.keys(C.jams).map(function(k){ return h('button',{class:'btn',type:'button',onclick:function(){ refillJam(k); }}, C.jams[k]); });
+    slots.push(slotEl('식빵과 잼 칸', C.jams[d.jk] || '', d.jn, '먹기', eatJam, jamOpts, d));
     shelf.replaceChildren.apply(shelf, slots);
-    sinkTxt.textContent = '컵 ' + d.cups + '개 · 그릇 ' + d.bowls + '개' + (sinkFull(d) ? ' — ' + C.full : '');
-    washBtn.disabled = washing || d.cups + d.bowls < 1;
+    sinkTxt.textContent = '컵 ' + d.cups + '개 · 그릇 ' + d.bowls + '개' + (d.kn > 0 ? ' · 잼 나이프 ' + d.kn + '개' : '') + (sinkFull(d) ? ' — ' + C.full : '');
+    washBtn.disabled = washing || d.cups + d.bowls + d.kn < 1;
   };
   widgets.pantry();
   pantryEnsure();
   return {
     shelf: h('div',{class:'tvwrap',style:'width:100%'}, shelf, said),
-    sink: h('div',{class:'tvwrap'}, sinkTxt, washBtn)
+    sink: h('div',{class:'tvwrap'}, sinkTxt, washBtn, sinkSaid)
   };
 }
 
@@ -1996,21 +2198,20 @@ function moodBox(){
   return h('div',{class:'tvwrap'}, h('div',{class:'mood'}, faceEl, labelEl, gear), nameI, whoEl);
 }
 
-/* ===== 쿠키 칸 (찬장): 5종 중 2종. 접시는 남지 않는다 ===== */
-var COOKIE_N = CONTENT.cookies.perSlot;
-S.cookies = null; S.marbles = null; S.reading = {};
-function cookiesOk(){ return !!(canShare && fs && !S.off.cookies); }
-var cookiesInit = false;
-function cookiesEnsure(){
-  if (cookiesInit || !cookiesOk()) return;
-  cookiesInit = true;
+/* ===== 쿠키 칸, 간식 칸 (찬장 아래): 5종 중 2종, 종류마다 5개. 접시는 남지 않는다 ===== */
+S.cookies = null; S.snacks = null; S.marbles = null; S.reading = {}; S.tseat = [null, null, null]; S.tplate = null;
+var STOCK_N = 5, stockInit = {};
+function stockOk(key){ return !!(canShare && fs && !S.off[key]); }
+function stockEnsure(key){
+  if (stockInit[key] || !stockOk(key)) return;
+  stockInit[key] = true;
   var two = pickN([0, 1, 2, 3, 4], 2);
-  setDoc(doc(fs, 'house', 'cookies'), { k1: two[0], n1: COOKIE_N, k2: two[1], n2: COOKIE_N }).catch(function(){});
+  setDoc(doc(fs, 'house', key), { k1: two[0], n1: STOCK_N, k2: two[1], n2: STOCK_N }).catch(function(){});
 }
-async function cookieAct(fn){
-  if (!cookiesOk()) return false;
+async function stockAct(key, fn){
+  if (!stockOk(key)) return false;
   try {
-    var ref = doc(fs, 'house', 'cookies');
+    var ref = doc(fs, 'house', key);
     await runTransaction(fs, async function(tx){
       var snap = await tx.get(ref);
       if (!snap.exists()) throw new Error('nodoc');
@@ -2022,29 +2223,27 @@ async function cookieAct(fn){
     return true;
   } catch(e){ return false; }
 }
-function cookieBox(){
-  var C = CONTENT.cookies;
-  var said = h('p',{class:'flavor','aria-live':'polite'});
+function stockSlot(key, C, said){
   var slot = h('div',{class:'slot'});
-  function cmeter(n){ return new Array(n + 1).join('●') + new Array(COOKIE_N - n + 1).join('○'); }
-  function again(){ if (widgets.cookies) widgets.cookies(); }
+  function cmeter(n){ return new Array(n + 1).join('●') + new Array(STOCK_N - n + 1).join('○'); }
+  function again(){ if (widgets[key]) widgets[key](); }
   async function eat(i){
     var kind = -1;
-    var ok = await cookieAct(function(d){ if (d['n' + i] < 1) return null; kind = d['k' + i]; d['n' + i]--; return d; });
+    var ok = await stockAct(key, function(d){ if (d['n' + i] < 1) return null; kind = d['k' + i]; d['n' + i]--; return d; });
     said.textContent = ok ? C.kinds[kind].eat : CONTENT.pantry.fail; again();
   }
   async function refill(i, kind){
     var other = i === 1 ? 'k2' : 'k1';
-    var ok = await cookieAct(function(d){ if (d['n' + i] !== 0 || d[other] === kind) return null; d['k' + i] = kind; d['n' + i] = COOKIE_N; return d; });
+    var ok = await stockAct(key, function(d){ if (d['n' + i] !== 0 || d[other] === kind) return null; d['k' + i] = kind; d['n' + i] = STOCK_N; return d; });
     said.textContent = ok ? C.kinds[kind].name + C.refilled : CONTENT.pantry.fail; again();
   }
-  widgets.cookies = function(){
-    var d = S.cookies;
-    if (!cookiesOk() || !d){
-      slot.replaceChildren(h('p',{class:'empty'}, cookiesOk() ? '쿠키 칸을 여는 중이에요.' : C.notReady));
+  widgets[key] = function(){
+    var d = S[key];
+    if (!stockOk(key) || !d){
+      slot.replaceChildren(h('p',{class:'empty'}, stockOk(key) ? C.title + '을(를) 여는 중이에요.' : C.notReady));
       return;
     }
-    var kids = [h('div',{class:'sn'}, '쿠키 칸')];
+    var kids = [h('div',{class:'sn'}, C.title)];
     [1, 2].forEach(function(i){
       var n = d['n' + i], other = d[i === 1 ? 'k2' : 'k1'], kind = C.kinds[d['k' + i]];
       var sub = [h('div',{class:'sn'}, kind ? kind.name : '')];
@@ -2061,9 +2260,14 @@ function cookieBox(){
     });
     slot.replaceChildren.apply(slot, kids);
   };
-  widgets.cookies();
-  cookiesEnsure();
-  return h('div',{class:'tvwrap',style:'width:100%'}, h('div',{class:'shelf'}, slot), said);
+  widgets[key]();
+  stockEnsure(key);
+  return slot;
+}
+function stockBox(){
+  var said = h('p',{class:'flavor','aria-live':'polite'});
+  var row = h('div',{class:'shelf'}, stockSlot('cookies', CONTENT.cookies, said), stockSlot('snacks', CONTENT.snacks, said));
+  return h('div',{class:'tvwrap',style:'width:100%'}, row, said);
 }
 
 /* ===== 기분 구슬 (현관): 하루에 한 사람이 2개, 병 6개. 모인 수는 모두에게 보인다. 하루 2개 제한은 이 브라우저 기준 ===== */
@@ -2656,12 +2860,30 @@ try {
     }
     redraw('mood');
   }, featureOff('mood'));
-  onSnapshot(doc(fs, 'house', 'cookies'), function(snap){
-    S.cookies = snap.exists() ? snap.data() : null;
-    if (!snap.exists()) cookiesEnsure();
-    redraw('cookies');
-  }, featureOff('cookies'));
+  ['cookies', 'snacks'].forEach(function(key){
+    onSnapshot(doc(fs, 'house', key), function(snap){
+      S[key] = snap.exists() ? snap.data() : null;
+      if (!snap.exists()) stockEnsure(key);
+      redraw(key);
+    }, featureOff(key));
+  });
   onSnapshot(doc(fs, 'house', 'marbles'), function(snap){ S.marbles = snap.exists() ? snap.data() : null; redraw('marbles'); }, featureOff('marbles'));
+  [0, 1, 2].forEach(function(i){
+    onSnapshot(doc(fs, 'table', 'seat' + i), function(snap){
+      if (!snap.exists()){ S.tseat[i] = null; } else {
+        var x = snap.data({ serverTimestamps: 'estimate' });
+        S.tseat[i] = { who: x.who, uid: x.uid, start: tsMs(x.start), rel: !!x.rel };
+      }
+      redraw('table');
+    }, featureOff('table'));
+  });
+  onSnapshot(doc(fs, 'table', 'plate'), function(snap){
+    if (!snap.exists()){ S.tplate = null; } else {
+      var x = snap.data({ serverTimestamps: 'estimate' });
+      S.tplate = { food: x.food, who: x.who, uid: x.uid, at: tsMs(x.at), gone: !!x.gone };
+    }
+    redraw('table');
+  }, featureOff('table'));
   [0, 1, 2, 3, 4].forEach(function(c){
     onSnapshot(doc(fs, 'reading', String(c)), function(snap){
       if (!snap.exists()){ S.reading[c] = null; } else {
