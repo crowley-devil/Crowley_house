@@ -288,6 +288,8 @@ button.bkcard:hover{border-color:var(--teal); border-left-color:var(--teal)}
 .door:hover{border-color:var(--teal)}
 .door[aria-pressed="true"]{border-color:var(--teal); box-shadow:inset 0 0 0 5px rgba(0,0,0,.22), 0 0 0 2px var(--teal)}
 .door{position:relative}
+.door[hidden]{display:none}
+.spare{display:grid; gap:6px; margin:4px 0 8px}
 .dsign{position:absolute; top:26px; left:50%; transform:translateX(-50%); white-space:nowrap; font-size:11px; line-height:1.3; padding:2px 7px; border-radius:2px; background:#1c1d22; border:1px solid #6b7078; color:#d6d8dc; box-shadow:0 1px 0 rgba(0,0,0,.5)}
 .dsign::before{content:''; position:absolute; left:50%; top:-9px; width:1px; height:8px; background:#8a8d94}
 .dsign[data-s="부재중"]{border-color:#7b8089; color:#c3c6cc}
@@ -391,7 +393,7 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-24)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-28)</p>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
@@ -862,6 +864,7 @@ var CONTENT = {
 {name:'케인', color:'#3b635a', desc:'“빈 방 아님.”'},
 {name:'빌리 루소', color:'#5b4a3f', desc:'“휴식 중, 방해하지 마세요.”라고 쓰인 메모지가 붙어 있다.'},
 {name:'이니드', color:'#5a3b63', desc:'“빈 방 아님.”'},
+{name:'윈체스터', color:'#2f2f36', desc:'윈체스터 전용 방', first:'방 안 책상에 부적이 하나 놓여 있다. 밑에 “어떤 일이든 이겨나갈 수 있게 해주는 부적” 이라고 적혀 있다.'},
   ]
 };
 
@@ -2582,6 +2585,8 @@ notesMount();
 /* ===== 객식구 복도 ===== */
 (function(){
   var hall = $('#hall'), desc = $('#guestdesc');
+  var firstP = h('p',{class:'guestdesc',hidden:true,'aria-live':'polite'});
+  desc.before(firstP);
   var cur = null;                      // { g, id }
   var gl = { open: false, clicks: [], armed: false, armT: null, fails: 0, until: 0, unlocked: false, msg: '' };
   S.rooms = {};
@@ -2647,7 +2652,7 @@ notesMount();
   desc.after(lockEl);
 
   function resetLock(){
-    gl.open = false; gl.unlocked = false; gl.armed = false; gl.clicks = []; gl.msg = '';
+    gl.open = false; gl.unlocked = false; gl.armed = false; gl.clicks = []; gl.msg = ''; firstP.hidden = true;
     clearTimeout(gl.armT); pinI.value = ''; newPinI.value = '';
   }
   /* 입력하기를 5초 안에 세 번 누르면 마스터 모드가 잠깐 켜진다 */
@@ -2685,6 +2690,8 @@ notesMount();
       if (!/^\d{4}$/.test(code)){ gl.msg = '번호는 숫자 네 자리예요.'; render(); return; }
       if (await writeRoom(id, keep(rec, { st: 'set', pin: await sha(id + ':' + code) }))){
         gl.unlocked = true; gl.msg = '번호를 정했어요. 이제 설명을 바꿀 수 있어요.';
+        /* 마스터키로 열린 방에서 처음 번호를 정한 사람에게만, 이 한 번 지문이 뜬다. 닫거나 다른 문을 누르면 사라진다 */
+        if (cur.g.first){ firstP.textContent = cur.g.first; firstP.hidden = false; }
       }
     } else if (st === 'set'){
       if (await sha(id + ':' + code) === rec.pin){ gl.unlocked = true; gl.fails = 0; gl.msg = ''; }
@@ -2707,6 +2714,7 @@ notesMount();
   function applyDoors(){
     Object.keys(doorMeta).forEach(function(id){
       var m = doorMeta[id], rec = roomRec(id);
+      if (m.g.spare) m.btn.hidden = !rec;
       var nm = (rec && rec.name) ? rec.name.replace(/\//g, '\n') : m.g.name;
       if (m.plate.textContent !== nm) m.plate.textContent = nm;
       m.btn.style.setProperty('--dc', (rec && rec.color) ? rec.color : m.g.color);
@@ -2733,7 +2741,11 @@ notesMount();
   }
   widgets.rooms = render;
 
-  var doors = CONTENT.guests.map(function(g, i){
+  /* 예비 문 칸 10개(s1~s10): 열기 전에는 복도에 보이지 않는다 */
+  var SPARE_N = 10;
+  var spareList = [];
+  for (var sp = 1; sp <= SPARE_N; sp++) spareList.push({ id: 's' + sp, spare: true, name: '새 방', color: '#3b4a63', desc: '아직 아무도 꾸미지 않은 방이다.' });
+  var doors = CONTENT.guests.concat(spareList).map(function(g, i){
     var id = g.id || 'g' + (i + 1);
     var plate = h('span',{class:'plate'}, g.name);
     var sign = h('span',{class:'dsign',hidden:true});
@@ -2749,6 +2761,50 @@ notesMount();
     return b;
   });
   hall.append.apply(hall, doors);
+  applyDoors();
+
+  /* 새 방 열기(우온 전용): '객식구 복도' 제목을 5초 안에 세 번 누르면 마스터 번호 칸이 나온다 */
+  var spareMsg = h('p',{class:'gstate','aria-live':'polite'});
+  var codeI = h('input',{type:'password',autocomplete:'off',maxlength:'40',placeholder:'마스터 번호','aria-label':'마스터 번호'});
+  var spName = h('input',{type:'text',maxlength:'16',autocomplete:'off',placeholder:'문패 이름 (줄바꿈은 /)','aria-label':'새 방 문패 이름'});
+  var spDesc = h('input',{type:'text',maxlength:'60',autocomplete:'off',placeholder:'방 설명','aria-label':'새 방 설명'});
+  var openBtn = h('button',{class:'btn',type:'button'},'새 방 열기');
+  var codeBtn = h('button',{class:'btn',type:'submit'},'확인');
+  var codeForm = h('form',{class:'row'}, codeI, codeBtn);
+  var spBox = h('div',{class:'spare',hidden:true}, codeForm, h('div',{class:'row'}, spName), h('div',{class:'row'}, spDesc), h('div',{class:'row'}, openBtn), spareMsg);
+  var spOk = false;
+  function spPaint(){
+    codeForm.hidden = spOk; spName.parentNode.hidden = !spOk; spDesc.parentNode.hidden = !spOk; openBtn.parentNode.hidden = !spOk;
+  }
+  spPaint();
+  codeForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    var code = codeI.value.trim(); codeI.value = '';
+    var mh = CONTENT.guestLock && CONTENT.guestLock.masterHash;
+    if (code && mh && await sha('master:' + code) === mh){ spOk = true; spareMsg.textContent = ''; }
+    else spareMsg.textContent = '번호가 맞지 않아요.';
+    spPaint();
+  });
+  openBtn.addEventListener('click', async function(){
+    if (!spOk || !roomsOk()) return;
+    var nm = spName.value.trim().slice(0, 16);
+    if (!nm){ spareMsg.textContent = '문패 이름을 적어 주세요.'; return; }
+    var free = '';
+    for (var k = 1; k <= SPARE_N; k++){ if (!roomRec('s' + k)){ free = 's' + k; break; } }
+    if (!free){ spareMsg.textContent = '더 열 수 있는 칸이 없어요.'; return; }
+    var col = PALETTE[Math.floor(Math.random() * PALETTE.length)];
+    var ok = await writeRoom(free, { st: 'open', pin: '', desc: spDesc.value.trim().slice(0, 60), name: nm, color: col, sign: '' });
+    if (ok){ spareMsg.textContent = '방을 열었어요. 복도 끝에서 찾을 수 있어요.'; spName.value = ''; spDesc.value = ''; }
+    else spareMsg.textContent = gl.msg || '지금은 할 수 없어요.';
+  });
+  hall.after(spBox);
+  var hClicks = [];
+  var hTitle = $('#hall-title');
+  if (hTitle) hTitle.addEventListener('click', function(){
+    var now = Date.now();
+    hClicks = hClicks.filter(function(t){ return now - t <= 5000; }); hClicks.push(now);
+    if (hClicks.length >= 3){ hClicks = []; spBox.hidden = !spBox.hidden; if (spBox.hidden){ spOk = false; spPaint(); } }
+  });
 })();
 
 /* ===== 가끔 일어나는 일 ===== */
