@@ -400,11 +400,24 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-30)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-31)</p>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
 <script type="module">
+/* ============================================================
+   목차 (아래 제목을 검색해서 찾아가세요)
+   글 내용(CONTENT) · 도구 · 공유 저장소 · 텔레비전 · 현관 · 거실 · 부엌 · 식탁
+   마커판 · 서재, 다용도실 · 방 열고 닫기 · 소파/찬장/싱크대/냉장고 · 할로윈 사탕
+   쿠키·간식 칸 · 기분 구슬 · 크리쳐 상자 · 책 읽기 · 칭찬과 고발 노트 · 객식구 복도
+   가끔 일어나는 일 · 할로윈 스킨 · 공유 저장소 연결(맨 아래, 문서 구독)
+
+   새 기능을 붙일 때 고칠 곳 다섯 군데
+   1) CONTENT에 문구  2) 화면 함수(xxxBox)와 해당 방의 mount 함수에 obj(...) 추가
+   3) ROOMS의 widgets 목록에 위젯 이름  4) 맨 아래 '공유 저장소 연결'에 watch(...) 한 줄
+   5) firestore.rules에 같은 이름의 블록
+   ============================================================ */
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, doc, setDoc, getDocs, onSnapshot, query, where, orderBy, limit, startAfter, serverTimestamp, runTransaction, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -934,6 +947,7 @@ var S = {
   off: {},
   defaultSlots: pickN(CONTENT.foods, 6)
 };
+function clockStr(left){ var m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000); return m + ':' + (sec < 10 ? '0' : '') + sec; }
 function tsMs(t){ return (t && t.toMillis) ? t.toMillis() : Date.now(); }
 function shareFailed(){ canShare = false; redrawAll(); }
 /* 새 기능은 규칙이 아직 게시되지 않았거나 오류가 나도 그 기능만 내 브라우저 안에서 돌아가게 한다 */
@@ -1309,7 +1323,6 @@ function tableBox(){
   var seats = h('div',{class:'seats'}, seatDots, seatTxt);
   var cards = h('div',{class:'bkcards'});
   var nameI = h('input',{type:'text',maxlength:'12',placeholder:'이름',autocomplete:'off','aria-label':'앉을 사람 이름'});
-  function clock(left){ var m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000); return m + ':' + (sec < 10 ? '0' : '') + sec; }
   async function sit(){
     var who = nameI.value.trim().replace(/\s+/g, ' ');
     if (tableMine() >= 0) return;
@@ -1339,7 +1352,7 @@ function tableBox(){
   function tickTimes(){
     Object.keys(timeEls).forEach(function(i){
       var st = tseatState(Number(i));
-      if (st) timeEls[i].textContent = '남은 시간 ' + clock(st.left);
+      if (st) timeEls[i].textContent = '남은 시간 ' + clockStr(st.left);
     });
   }
   widgets.table = function(){
@@ -1366,7 +1379,7 @@ function tableBox(){
       var kids = [h('span',{class:'bkhead'}, h('span',{class:'bkname'}, '자리 ' + (i + 1)), h('span',{class:'bktag'}, tag))];
       if (st){
         kids.push(h('span',{class:'bkline'}, h('b', null, st.who)));
-        var tEl = h('span',{class:'bktime'}, '남은 시간 ' + clock(st.left));
+        var tEl = h('span',{class:'bktime'}, '남은 시간 ' + clockStr(st.left));
         timeEls[i] = tEl; kids.push(tEl);
       } else {
         kids.push(h('span',{class:'bkline dim'}, T.free));
@@ -2037,9 +2050,8 @@ function sofaBox(id){
     upBtn.hidden = !(st && st.uid && st.uid === myUid());
     coverBtn.hidden = !(st && !st.blanket && st.uid !== myUid() && N.authOk);
     if (st){
-      var m = Math.floor(st.left/60000), sec = Math.floor((st.left%60000)/1000);
       var tk = asList(CONTENT.sofa.taken), bl = asList(CONTENT.sofa.blanket), sk = Math.floor(st.start / 1000);
-      said.textContent = st.who + tk[sk % tk.length] + ' (남은 시간 ' + m + ':' + (sec < 10 ? '0' : '') + sec + ')' + (st.blanket ? ' ' + bl[sk % bl.length] : '');
+      said.textContent = st.who + tk[sk % tk.length] + ' (남은 시간 ' + clockStr(st.left) + ')' + (st.blanket ? ' ' + bl[sk % bl.length] : '');
       sawTaken = true;
     } else if (!said.textContent || said.textContent === CONTENT.sofa.busy || /남은 시간/.test(said.textContent)) {
       if (sawTaken){ freeLine = pick(asList(id === 'sofa' ? CONTENT.sofa.free : (CONTENT.sofa.freeSolo || CONTENT.sofa.free))); sawTaken = false; }
@@ -2590,11 +2602,10 @@ function bookBox(){
     try { await updateDoc(doc(fs, 'reading', String(mine.c)), { rel: true }); } catch(err){}
   }}, '책 덮기');
   var startRow = h('div',{class:'row'}, nameI, b15, b30);
-  function clock(left){ var m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000); return m + ':' + (sec < 10 ? '0' : '') + sec; }
   function tickTimes(){
     Object.keys(timeEls).forEach(function(i){
       var st = readState(Number(i));
-      if (st) timeEls[i].textContent = '남은 시간 ' + clock(st.left);
+      if (st) timeEls[i].textContent = '남은 시간 ' + clockStr(st.left);
     });
   }
   widgets.reading = function(){
@@ -2622,7 +2633,7 @@ function bookBox(){
       var tag = isMine ? '내가 읽는 중' : st ? '읽는 중' : sel ? '고른 분야' : '';
       var kids = [h('span',{class:'bkhead'}, h('span',{class:'bkname'}, c.name), h('span',{class:'bktag'}, tag))];
       if (st){
-        var tEl = h('span',{class:'bktime'}, '남은 시간 ' + clock(st.left));
+        var tEl = h('span',{class:'bktime'}, '남은 시간 ' + clockStr(st.left));
         timeEls[i] = tEl;
         if (isMine){
           kids.push(h('span',{class:'bkline bkbook'}, bookLine(c.books[st.b] || c.books[0])));
@@ -3081,9 +3092,17 @@ try {
     S.board = snap.docs.map(function(d){ var x = d.data({ serverTimestamps: 'estimate' }); return { id: d.id, t: x.t, ts: tsMs(x.ts) }; });
     redraw('board');
   }, shareFailed);
-  onSnapshot(doc(fs, 'house', 'fridge'), function(snap){ S.fridge = snap.exists() ? snap.data() : null; redraw('fridge'); }, shareFailed);
-  onSnapshot(doc(fs, 'house', 'doorNote'), function(snap){ S.door = snap.exists() ? snap.data() : null; redraw('door'); }, shareFailed);
-  onSnapshot(doc(fs, 'house', 'fridgeUser'), function(snap){ S.fridgeUser = snap.exists() ? snap.data() : null; redraw('fridge'); }, featureOff('fridgeUser'));
+  /* 문서 하나를 S[key]에 담고 위젯 name을 다시 그린다. 문서가 없을 때 할 일은 missing에 */
+  function watch(path, key, name, onErr, missing){
+    onSnapshot(doc(fs, path[0], path[1]), function(snap){
+      S[key] = snap.exists() ? snap.data() : null;
+      if (!snap.exists() && missing) missing(key);
+      redraw(name);
+    }, onErr);
+  }
+  watch(['house', 'fridge'], 'fridge', 'fridge', shareFailed);
+  watch(['house', 'doorNote'], 'door', 'door', shareFailed);
+  watch(['house', 'fridgeUser'], 'fridgeUser', 'fridge', featureOff('fridgeUser'));
   onSnapshot(doc(fs, 'house', 'marker'), markerOnState, featureOff('marker'));
   onSnapshot(collection(fs, 'guestRooms'), function(snap){
     var map = {};
@@ -3108,11 +3127,7 @@ try {
       redraw(sid);
     }, featureOff(sid));
   });
-  onSnapshot(doc(fs, 'house', 'pantry'), function(snap){
-    S.pantry = snap.exists() ? snap.data() : null;
-    if (!snap.exists()) pantryEnsure();
-    redraw('pantry');
-  }, featureOff('pantry'));
+  watch(['house', 'pantry'], 'pantry', 'pantry', featureOff('pantry'), pantryEnsure);
   onSnapshot(doc(fs, 'house', 'mood'), function(snap){
     if (!snap.exists()){ S.mood = null; } else {
       var x = snap.data({ serverTimestamps: 'estimate' });
@@ -3120,13 +3135,7 @@ try {
     }
     redraw('mood');
   }, featureOff('mood'));
-  ['cookies', 'snacks'].forEach(function(key){
-    onSnapshot(doc(fs, 'house', key), function(snap){
-      S[key] = snap.exists() ? snap.data() : null;
-      if (!snap.exists()) stockEnsure(key);
-      redraw(key);
-    }, featureOff(key));
-  });
+  ['cookies', 'snacks'].forEach(function(key){ watch(['house', key], key, key, featureOff(key), stockEnsure); });
   onSnapshot(doc(fs, 'house', 'creature'), function(snap){
     if (!snap.exists()){ S.creature = null; crEnsure(); }
     else {
@@ -3135,7 +3144,7 @@ try {
     }
     redraw('creature');
   }, featureOff('creature'));
-  onSnapshot(doc(fs, 'house', 'marbles'), function(snap){ S.marbles = snap.exists() ? snap.data() : null; redraw('marbles'); }, featureOff('marbles'));
+  watch(['house', 'marbles'], 'marbles', 'marbles', featureOff('marbles'));
   [0, 1, 2].forEach(function(i){
     onSnapshot(doc(fs, 'table', 'seat' + i), function(snap){
       if (!snap.exists()){ S.tseat[i] = null; } else {
@@ -3161,9 +3170,9 @@ try {
       redraw('reading');
     }, featureOff('reading'));
   });
-  onSnapshot(doc(fs, 'house', 'candy'), function(snap){ S.candy = snap.exists() ? snap.data() : null; redraw('candy'); }, featureOff('candy'));
-  onSnapshot(doc(fs, 'house', 'knock'), function(snap){ S.knock = snap.exists() ? snap.data() : null; redraw('knock'); }, featureOff('knock'));
-  onSnapshot(doc(fs, 'house', 'fridgeStats'), function(snap){ S.fridgeStats = snap.exists() ? snap.data() : null; redraw('fridge'); }, featureOff('fridgeStats'));
+  watch(['house', 'candy'], 'candy', 'candy', featureOff('candy'));
+  watch(['house', 'knock'], 'knock', 'knock', featureOff('knock'));
+  watch(['house', 'fridgeStats'], 'fridgeStats', 'fridge', featureOff('fridgeStats'));
 } catch(e){ canShare = false; }
 })();
 </script>
