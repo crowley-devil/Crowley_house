@@ -90,8 +90,6 @@ button{font:inherit; color:inherit}
   content:""; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--teal); margin-left:9px; vertical-align:middle;
   animation:pulse 1.2s ease-in-out infinite;
 }
-.leak{min-height:1.6em; margin:0; padding:0 14px 12px; font-family:var(--f-disp); font-size:14px; color:var(--crimson); opacity:0; transition:opacity .6s}
-.leak.show{opacity:1}
 .sign{
   margin:0 14px 12px; display:inline-block; border:1px solid var(--crimson); color:var(--crimson);
   font-size:12px; letter-spacing:.12em; padding:2px 8px;
@@ -346,11 +344,36 @@ body.hw{
 
 @keyframes roll{to{background-position:0 3px}}
 @keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(-3px,2px)}50%{transform:translate(3px,-2px)}75%{transform:translate(-2px,-2px)}100%{transform:translate(0,0)}}
+.spines{display:grid; grid-template-columns:repeat(5,1fr); gap:6px; width:100%}
+.spgrp{display:flex; justify-content:center; align-items:flex-end; gap:2px; height:34px}
+.spgrp i{width:5px; border-radius:1px 1px 0 0; background:#4a3a40}
+.spgrp i:nth-child(3n){height:88%} .spgrp i:nth-child(4n){height:96%} .spgrp i:nth-child(5n){height:80%} .spgrp i:nth-child(2n+1){height:92%}
+.spgrp .sp0{background:#4a3a40} .spgrp .sp1{background:#3d3a46} .spgrp .sp2{background:#52434a} .spgrp .sp3{background:#38404a} .spgrp .sp4{background:#44393f}
+.skywin{position:relative; width:100%; height:150px; border:3px solid #232c3a; border-radius:4px; overflow:hidden; box-sizing:border-box}
+.skywin::before,.skywin::after{content:""; position:absolute; background:#232c3a; z-index:3}
+.skywin::before{left:50%; top:0; bottom:0; width:3px} .skywin::after{top:50%; left:0; right:0; height:3px}
+.skywin[data-sky="morning"]{background:linear-gradient(#41567a,#c99a8a 80%,#e8c9a0)}
+.skywin[data-sky="day"]{background:linear-gradient(#3f78a8,#8cc0dc 85%)}
+.skywin[data-sky="evening"]{background:linear-gradient(#3a3a6a,#b0506a 65%,#e0905a)}
+.skywin[data-sky="night"]{background:linear-gradient(#0f1830,#1c2748 70%,#2c2d4e)}
+.skywin .star,.skywin .moon{display:none}
+.skywin[data-sky="night"] .star{display:block; position:absolute; width:2px; height:2px; border-radius:50%; background:#eef; animation:twinkle 3s ease-in-out infinite}
+.skywin .star:nth-child(3n){animation-delay:.8s} .skywin .star:nth-child(3n+1){animation-delay:1.7s}
+.skywin[data-sky="night"] .moon{display:block; position:absolute; right:14%; top:16%; width:24px; height:24px; border-radius:50%; background:#e9e4c8; box-shadow:-7px 0 0 0 #0f1830 inset}
+.skywin .hill{position:absolute; left:0; right:0; bottom:0; height:22px; background:#0b0f1a; clip-path:polygon(0 60%,15% 30%,32% 55%,50% 20%,70% 50%,88% 25%,100% 55%,100% 100%,0 100%); z-index:1}
+.skywin .passby{position:absolute; top:46%; left:-12%; font-size:22px; z-index:2}
+.skywin .passby.go{animation:passby 7s linear forwards}
+.rack{display:flex; gap:3px; height:44px; align-items:flex-end; width:100%}
+.rack i{flex:1; max-width:8px; height:100%; background:#2d3544; border-radius:1px}
+.rack .rc1{background:#3a3f50; height:92%} .rack .rc2{background:#343a4a; height:96%} .rack .rc3{background:#2a303d; height:88%}
+@keyframes twinkle{50%{opacity:.3}}
+@keyframes passby{from{left:-12%}to{left:104%}}
 @keyframes pulse{50%{opacity:.25}}
 @media (prefers-reduced-motion:reduce){
   .tv.on::before,.tv.scare,.room[data-tv] .rn::after{animation:none}
-  .leak{transition:none}
   .shake{animation:none}
+  .skywin .star,.skywin .passby.go{animation:none}
+  .skywin .passby.go{left:44%}
 }
 </style>
 
@@ -368,8 +391,7 @@ body.hw{
       <div class="room-body" id="b-entry" hidden></div>
     </section>
     <section class="room" data-room="study" style="grid-area:study">
-      <button class="room-head" type="button" aria-expanded="false" aria-controls="b-study"><span class="rn">서재</span><span class="rh">잠겨 있음</span></button>
-      <p class="leak" id="leak" aria-live="polite"></p>
+      <button class="room-head" type="button" aria-expanded="false" aria-controls="b-study"><span class="rn">서재</span><span class="rh">열림</span></button>
       <div class="room-body" id="b-study" hidden></div>
     </section>
     <section class="room" data-room="living" data-tv="off" style="grid-area:living">
@@ -400,7 +422,7 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-31)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-32)</p>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
@@ -408,7 +430,7 @@ body.hw{
 /* ============================================================
    목차 (아래 제목을 검색해서 찾아가세요)
    글 내용(CONTENT) · 도구 · 공유 저장소 · 텔레비전 · 현관 · 거실 · 부엌 · 식탁
-   마커판 · 서재, 다용도실 · 방 열고 닫기 · 소파/찬장/싱크대/냉장고 · 할로윈 사탕
+   마커판 · 서재(서가·창가·책상·음반), 다용도실 · 방 열고 닫기 · 소파/찬장/싱크대/냉장고 · 할로윈 사탕
    쿠키·간식 칸 · 기분 구슬 · 크리쳐 상자 · 책 읽기 · 칭찬과 고발 노트 · 객식구 복도
    가끔 일어나는 일 · 할로윈 스킨 · 공유 저장소 연결(맨 아래, 문서 구독)
 
@@ -754,7 +776,6 @@ var CONTENT = {
     cleared: '접시가 치워졌다.',
     notReady: '식탁 자리는 아직 준비 중이에요.'
   },
-  knock: '지금까지 모두 합쳐서 {n}번 두드렸다.',
   marker: {
     winLabel: '당첨!',
     dudLabel: '꽝.',
@@ -857,24 +878,45 @@ var CONTENT = {
     {name:'심판', up:'미뤄둔 일을 다시 꺼낼 때. 용서하거나 용서받을 일이 있다.', rev:'자책이 길어진다. 이미 지난 일은 이제 그만두자.'},
     {name:'세계', up:'하나가 완성되는 날. 마무리를 짓고 한숨 돌리자.', rev:'마지막 한 조각이 빠졌다. 끝내지 못한 일 하나를 확인하자.'}
   ],
-  study: [
-    '누구야. 문 두드리지 마.',
-    '…식물들, 오늘 왜 이렇게 조용하지.',
-    '지금은 곤란해. 나중에 와.',
-    '(안쪽에서 의자 끄는 소리)'
-  ],
-  studyQuiet: [
-    '조용하다. 문 너머에 아무도 없는 것 같다.',
-    '문고리가 차갑다. 안은 어둡다.',
-    '잠겨 있다. 기척이 없다.'
-  ],
-  studyDoor: [
-    '잠겨 있다. 안에서 종이 넘기는 소리가 난다.',
-    '음악 소리가 문을 넘어 들린다.',
-    '식물들에게 소리를 지르는 것 같다.',
-    '문고리를 돌려도 꿈쩍하지 않는다.',
-    '「…들어오지 말라고 했을 텐데.」'
-  ],
+  studyRoom: {
+    desk: [
+      '만년필 뚜껑이 열려 있다. 메모지 한 장이 반쯤 쓰여 있다.',
+      '책상 위가 가지런하다. 가지런해 보이게 치운 것 같다.',
+      '스탠드가 켜져 있다. 아무도 없는데.',
+      '펼쳐 둔 노트에 같은 단어가 여러 번 지워져 있다.'
+    ],
+    drawer: [
+      '서랍 안에 말라붙은 잉크병이 굴러다닌다.',
+      '서랍이 잘 열리지 않는다. 안쪽에서 뭔가 걸려 있다.',
+      '서랍 안에 클립만 한 통 가득 들어 있다.',
+      '서랍 맨 밑에 먼지 쌓인 영수증 한 장이 있다. 글씨가 흐려서 읽을 수 없다.',
+      '서랍 안은 비어 있다. 비어 있는 것이 이상할 정도로.',
+      '서랍 안에 식물 영양제가 세 병 있다. 하나는 비어 있다.',
+      '서랍 안쪽 바닥에 누군가 낙서를 해 두었다. 동그라미 하나.',
+      '서랍을 열자 종이 냄새가 확 올라온다.'
+    ],
+    rack: '음반이 알파벳 순으로 꽂혀 있다.',
+    sky: {
+      morning: ['창밖이 막 밝아 오고 있다.', '새벽 공기가 유리에 서려 있다.', '창틀에 이슬이 맺혀 있다.'],
+      day: ['창밖이 환하다. 정원이 잘 보인다.', '햇빛이 책상 모서리까지 들어와 있다.', '창밖에서 바람 소리가 난다.'],
+      evening: ['창밖이 붉게 물들고 있다.', '노을이 서가 위까지 비친다.', '저녁 그림자가 길게 늘어져 있다.'],
+      night: ['지금은 밤. 창밖이 조용하다.', '별이 꽤 많이 보인다.', '유리에 방 안의 불빛이 비친다.']
+    },
+    pass: [
+      { e: '🐑', t: '창밖으로 양 한 마리가 지나갔다. 혼자였다.' },
+      { e: '🎈', t: '풍선이 느릿느릿 떠 지나갔다. 누구 것일까.' },
+      { e: '🐧', t: '펭귄이 종종걸음으로 지나갔다. 이쪽은 쳐다보지도 않았다.' },
+      { e: '🚲', t: '빈 자전거가 혼자 굴러갔다.' },
+      { e: '🛸', t: '아주 작은 접시 모양이 쓱 지나갔다. 못 본 걸로 하자.' },
+      { e: '🦆', t: '오리가 지나갔다. 평소보다 훨씬 컸다.' },
+      { e: '☂️', t: '우산이 날아갔다. 사람은 없었다.' },
+      { e: '🐈', t: '고양이가 창문 앞을 걸어가며 이쪽을 한 번 봤다.' },
+      { e: '🚀', t: '로켓이 지나갔다. 방향이 위가 아니었다.' },
+      { e: '🪁', t: '연이 줄 없이 날아갔다.' }
+    ],
+    passEverySec: 25,
+    passChance: 0.15
+  },
   labInner: [
     '열리지 않는다. 문 밑으로 미지근한 김이 새어 나온다.',
     '열쇠구멍으로 보글보글 소리가 난다.',
@@ -1189,8 +1231,7 @@ function mountLiving(body){
     obj('마커판', markerBox()),
     obj('소파', sofaBox('sofa'),
       h('div',{class:'subsofa'}, h('div',{class:'fcap'}, '1인용 소파 1'), sofaBox('sofa2')),
-      h('div',{class:'subsofa'}, h('div',{class:'fcap'}, '1인용 소파 2'), sofaBox('sofa3'))),
-    obj('책 읽기', bookBox())
+      h('div',{class:'subsofa'}, h('div',{class:'fcap'}, '1인용 소파 2'), sofaBox('sofa3')))
   );
   armScare();
 }
@@ -1645,36 +1686,73 @@ function mountKitchen(body){
 }
 
 /* ===== 서재, 다용도실 ===== */
-var studyIn = false;
+/* 서재 안쪽: 서가(독서), 창가, 책상, 음반 선반 */
 function mountStudy(body){
-  var line = h('p',{class:'flavor','aria-live':'polite'}, studyIn ? CONTENT.studyDoor[0] : CONTENT.studyQuiet[0]);
-  body.append(obj('서재 문',
-    h('div',{class:'tvwrap'},
-      h('button',{class:'btn',type:'button',onclick:function(){
-        var pool = studyIn ? CONTENT.studyDoor : CONTENT.studyQuiet;
-        line.textContent = pool[Math.floor(Math.random()*pool.length)];
-      }},'문고리 잡기'),
-      line
-    ),
-    knockBox()));
+  body.append(
+    obj('서가', spineStrip(), bookBox()),
+    obj('창가', windowBox()),
+    obj('책상', deskBox()),
+    obj('음반 선반', rackBox())
+  );
 }
-function knockBox(){
-  var txt = h('p',{class:'hint'});
-  var last = 0;
-  var btn = h('button',{class:'btn',type:'button',onclick:function(){
-    var now = Date.now();
-    if (now - last < 800) return;
-    last = now;
-    bump('knock', 'n');
-  }},'문 두드리기');
-  widgets.knock = function(){
-    var off = !(canShare && fs) || S.off.knock;
-    btn.hidden = off; txt.hidden = off;
-    var n = (S.knock && typeof S.knock.n === 'number') ? S.knock.n : 0;
-    txt.textContent = CONTENT.knock.replace('{n}', String(n));
-  };
-  widgets.knock();
-  return h('div',{class:'tvwrap'}, btn, txt);
+function spineStrip(){
+  var row = h('div',{class:'spines','aria-hidden':'true'});
+  for (var g = 0; g < CONTENT.books.cats.length; g++){
+    var grp = h('span',{class:'spgrp'});
+    for (var k = 0; k < 7; k++) grp.append(h('i',{class:'sp' + ((g * 3 + k * 2) % 5)}));
+    row.append(grp);
+  }
+  return row;
+}
+function skyPeriod(){
+  var hr = new Date().getHours();
+  return hr >= 5 && hr < 9 ? 'morning' : hr < 17 ? 'day' : hr < 20 ? 'evening' : 'night';
+}
+var STAR_POS = [[8,14],[20,30],[36,12],[44,40],[62,18],[72,44],[84,12],[92,36],[14,52],[56,56],[28,20],[78,26]];
+function windowBox(){
+  var R = CONTENT.studyRoom;
+  var win = h('div',{class:'skywin'});
+  var stars = STAR_POS.map(function(p){ return h('i',{class:'star',style:'left:' + p[0] + '%;top:' + p[1] + '%'}); });
+  var moon = h('span',{class:'moon'});
+  var hill = h('span',{class:'hill'});
+  var thing = h('span',{class:'passby',hidden:true});
+  win.append.apply(win, stars.concat([moon, hill, thing]));
+  var line = h('p',{class:'flavor','aria-live':'polite'});
+  var period = '', passT = null;
+  function setSky(force){
+    var p = skyPeriod();
+    if (p === period && !force) return;
+    period = p;
+    win.dataset.sky = p;
+    line.textContent = pick(R.sky[p]);
+  }
+  setSky(true);
+  function pass(){
+    var it = pick(R.pass);
+    thing.textContent = it.e; thing.hidden = false;
+    thing.classList.remove('go'); void thing.offsetWidth; thing.classList.add('go');
+    line.textContent = it.t;
+    clearTimeout(passT);
+    passT = setTimeout(function(){ thing.hidden = true; setSky(true); }, 7000);
+  }
+  var tick = setInterval(function(){
+    if (!win.isConnected){ clearInterval(tick); clearTimeout(passT); return; }
+    if (document.hidden || !thing.hidden) return;
+    setSky(false);
+    if (Math.random() < R.passChance) pass();
+  }, R.passEverySec * 1000);
+  return h('div',{class:'tvwrap',style:'width:100%'}, win, line);
+}
+function deskBox(){
+  var R = CONTENT.studyRoom;
+  var line = h('p',{class:'flavor','aria-live':'polite'}, pick(R.desk));
+  var btn = h('button',{class:'btn',type:'button',onclick:function(){ line.textContent = pick(R.drawer); }}, '서랍 열기');
+  return h('div',{class:'tvwrap'}, line, btn);
+}
+function rackBox(){
+  var rack = h('div',{class:'rack','aria-hidden':'true'});
+  for (var k = 0; k < 24; k++) rack.append(h('i',{class:'rc' + (k % 4)}));
+  return h('div',{class:'tvwrap',style:'width:100%'}, rack, h('p',{class:'flavor'}, CONTENT.studyRoom.rack));
 }
 
 var lab = { clicks:0, open:false };
@@ -1727,10 +1805,10 @@ function mountBack(body){ body.append(h('div',{class:'obj'}, descBox('블랙 타
 
 /* ===== 방 열고 닫기 ===== */
 var ROOMS = {
-  living:  { mount: mountLiving,  widgets:['tv','marker','sofa','sofa2','sofa3','vase','reading'] },
+  living:  { mount: mountLiving,  widgets:['tv','marker','sofa','sofa2','sofa3','vase'] },
   entry:   { mount: mountEntry,   widgets:['guestbook','door','mood','marbles','creature'] },
   kitchen: { mount: mountKitchen, widgets:['board','fridge','pantry','cookies','snacks','table'] },
-  study:   { mount: mountStudy,   widgets:['knock'] },
+  study:   { mount: mountStudy,   widgets:['reading'] },
   util:    { mount: mountUtil,    widgets:[] },
   front:   { mount: mountFront,   widgets:['candy'] },
   back:    { mount: mountBack,    widgets:['walk'] }
@@ -1763,7 +1841,7 @@ document.querySelectorAll('.room').forEach(function(el){
 
 /* ===== 소파 휴식, 찬장과 싱크대, 기분 다이얼, 노크, 냉장고 기록 ===== */
 S.vase = null; S.pocket = (function(){ var ids = CONTENT.garden.flowers.map(function(f){ return f.id; }); var a = lsGet('crowley.pocket', []); return Array.isArray(a) ? a.filter(function(x){ return ids.indexOf(x) >= 0; }).slice(0, CONTENT.garden.pocketMax) : []; })();
-S.sofa = null; S.sofa2 = null; S.sofa3 = null; S.pantry = null; S.mood = null; S.knock = null; S.fridgeStats = null;
+S.sofa = null; S.sofa2 = null; S.sofa3 = null; S.pantry = null; S.mood = null; S.fridgeStats = null;
 var SOFA_EGG = ['빌리', '빌리 루소', '케인', 'caine'], PANTRY_N = 8, SINK_MAX = 6;
 function dayKST(ms){
   try { return new Date(ms).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }); }
@@ -2552,7 +2630,7 @@ function creatureBox(){
   return h('div',{class:'tvwrap',style:'width:100%'}, art, nameP, prog, left, btns, said);
 }
 
-/* ===== 책 읽기 (거실): 분야마다 한 사람, 전체 3명까지. 책은 읽기 시작할 때 랜덤으로 정해진다 ===== */
+/* ===== 책 읽기 (서재): 분야마다 한 사람, 전체 3명까지. 책은 읽기 시작할 때 랜덤으로 정해진다 ===== */
 function readState(c){
   var d = S.reading[c];
   if (!d || typeof d.start !== 'number') return null;
@@ -3028,37 +3106,6 @@ function loop(fn, min, max){
   function go(){ setTimeout(function(){ fn(); go(); }, (min + Math.random()*(max - min))*1000); }
   go();
 }
-var leakEl = $('#leak'), leakT = null;
-function showLeak(){
-  leakEl.textContent = pick(CONTENT.study);
-  leakEl.classList.add('show');
-  clearTimeout(leakT);
-  leakT = setTimeout(function(){ leakEl.classList.remove('show'); }, 10000);
-}
-/* 서재: 모두에게 같은 시계로 정해진다. 약 9분 주기마다 2~4분 동안 크롤리가 들어와 있고, 그동안 40초쯤 간격으로 대사가 새어 나온다 */
-var STUDY_CYCLE = 9*60*1000, lastLeak = 0;
-function studyPresentAt(now){
-  var slot = Math.floor(now / STUDY_CYCLE);
-  var r = mulberry32(slot * 7919 + 17);
-  var off = 30000 + r()*240000, dur = 120000 + r()*120000;
-  var t = now - slot*STUDY_CYCLE;
-  return t >= off && t < off + dur;
-}
-function studyTick(){
-  var now = Date.now();
-  var inside = studyPresentAt(now);
-  var hint = $('.rh', $('[data-room="study"]'));
-  if (inside && !studyIn){
-    studyIn = true; hint.textContent = '인기척이 있음';
-    if (!document.hidden){ showLeak(); lastLeak = now; }
-  } else if (!inside && studyIn){
-    studyIn = false; hint.textContent = '잠겨 있음';
-  } else if (inside && !document.hidden && now - lastLeak >= 40000){
-    showLeak(); lastLeak = now;
-  }
-}
-studyTick();
-setInterval(studyTick, 5000);
 loop(tvOn, 45, 130);
 
 /* ===== 할로윈 스킨: 이벤트 기간(CONTENT.candy.endAt 전)에만 켜진다 ===== */
@@ -3171,7 +3218,6 @@ try {
     }, featureOff('reading'));
   });
   watch(['house', 'candy'], 'candy', 'candy', featureOff('candy'));
-  watch(['house', 'knock'], 'knock', 'knock', featureOff('knock'));
   watch(['house', 'fridgeStats'], 'fridgeStats', 'fridge', featureOff('fridgeStats'));
 } catch(e){ canShare = false; }
 })();
