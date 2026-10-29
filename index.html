@@ -247,6 +247,10 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .crart svg{width:150px; height:150px; display:block; margin:0 auto}
 .crname{margin:0; width:100%; text-align:center; font-family:var(--f-disp); font-size:16px; min-height:1.5em}
 .crprog{margin:0; width:100%; text-align:center}
+.cralbum{width:100%; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px}
+.albcard{display:grid; justify-items:center; gap:2px; text-align:center; min-width:0}
+.albcard svg{width:76px; height:76px}
+.albname{font-family:var(--f-disp); font-size:12px; overflow-wrap:anywhere}
 .crbtns{width:100%; display:flex; flex-wrap:wrap; gap:6px; justify-content:center}
 .subslot{border-top:1px dashed var(--line); padding-top:6px; display:grid; gap:6px}
 .readline{margin:0; font-family:var(--f-disp)}
@@ -437,7 +441,7 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-35)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-36)</p>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
@@ -773,7 +777,11 @@ var CONTENT = {
     grown: '크리쳐가 다 자랐다.',
     stay: '하루 동안 이 모습으로 지내다가 새 알로 바뀐다.',
     fail: '지금은 넣을 수 없어요.',
-    notReady: '크리쳐 상자는 아직 준비 중이에요.'
+    notReady: '크리쳐 상자는 아직 준비 중이에요.',
+    nth: '{n}번째 크리쳐',
+    albumOpen: '앨범 열기', albumClose: '앨범 닫기', albumMax: 6,
+    albumEmpty: '아직 앨범에 남은 크리쳐가 없다.',
+    albumFail: '앨범을 불러오지 못했어요.'
   },
   table: {
     seats: 3, mins: 20,
@@ -2691,12 +2699,20 @@ function crUse(){
   var used = (m && m.day === todayKST()) ? (Number(m.used) || 0) : 0;
   lsSet('crowley.creature', { day: todayKST(), used: used + 1 });
 }
-function crZero(){ return { c0: 0, c1: 0, c2: 0, c3: 0, c4: 0 }; }
+function crZero(gen){ return { c0: 0, c1: 0, c2: 0, c3: 0, c4: 0, gen: gen || 1 }; }
+function crGen(){ return (S.creature && S.creature.gen) || 1; }
+/* 다 자란 뒤 하루가 지나면: 앨범에 한 장 남기고(실패해도 계속), 번호를 올린 새 알로 바꾼다 */
+async function crRollOver(){
+  var g = crGen(), c = crRaw(), a = { gen: g, ts: serverTimestamp() };
+  for (var i = 0; i < 5; i++) a['c' + i] = c[i];
+  try { await setDoc(doc(fs, 'creatureAlbum', String(g)), a); } catch(e){}
+  try { await setDoc(doc(fs, 'house', 'creature'), crZero(g + 1)); } catch(e){}
+}
 var crBusy = false, crResetting = false;
 function crEnsure(){
   if (crBusy || !(canShare && fs) || S.off.creature) return;
   crBusy = true;
-  setDoc(doc(fs, 'house', 'creature'), crZero()).catch(function(){}).then(function(){ setTimeout(function(){ crBusy = false; }, 5000); });
+  setDoc(doc(fs, 'house', 'creature'), crZero(1)).catch(function(){}).then(function(){ setTimeout(function(){ crBusy = false; }, 5000); });
 }
 function creatureBox(){
   var C = CONTENT.creature;
@@ -2706,6 +2722,28 @@ function creatureBox(){
   var left = h('p',{class:'hint'});
   var said = h('p',{class:'flavor','aria-live':'polite'});
   var btns = h('div',{class:'crbtns'});
+  var nth = h('p',{class:'hint crprog'});
+  var albBtn = h('button',{class:'btn',type:'button',onclick:function(){ toggleAlbum(); }}, C.albumOpen);
+  var albBox = h('div',{class:'cralbum'});
+  albBox.hidden = true;
+  var albOpen = false;
+  async function toggleAlbum(){
+    albOpen = !albOpen;
+    albBtn.textContent = albOpen ? C.albumClose : C.albumOpen;
+    albBox.hidden = !albOpen;
+    if (!albOpen) return;
+    albBox.replaceChildren(h('p',{class:'hint'}, '…'));
+    try {
+      var snap = await getDocs(query(collection(fs, 'creatureAlbum'), orderBy('gen', 'desc'), limit(C.albumMax)));
+      var cards = snap.docs.map(function(d){
+        var x = d.data(), c = [0, 1, 2, 3, 4].map(function(i){ return Math.max(0, Number(x['c' + i]) || 0); });
+        var card = h('div',{class:'albcard'}, h('span',{class:'hint'}, C.nth.replace('{n}', String(Number(x.gen) || d.id))), h('span',{class:'albname'}, crName(c, 3)));
+        card.insertAdjacentHTML('afterbegin', crSvg(c, 3));
+        return card;
+      });
+      albBox.replaceChildren.apply(albBox, cards.length ? cards : [h('p',{class:'hint'}, C.albumEmpty)]);
+    } catch(e){ albBox.replaceChildren(h('p',{class:'hint'}, C.albumFail)); }
+  }
   var feeding = false, lastSig = '';
   var buttons = C.ings.map(function(nm, i){
     return h('button',{class:'btn',type:'button',onclick:function(){ feed(i); }}, nm);
@@ -2735,13 +2773,14 @@ function creatureBox(){
     btns.hidden = false;
     if (crExpired() && !crResetting){
       crResetting = true;
-      setDoc(doc(fs, 'house', 'creature'), crZero()).catch(function(){}).then(function(){ setTimeout(function(){ crResetting = false; }, 5000); });
+      crRollOver().then(function(){ setTimeout(function(){ crResetting = false; }, 5000); });
     }
     var c = crCounts(), n = crSum(c), st = crStage(n), full = n >= CR_MAX, left1 = crLeft();
     var sig = c.join(',') + '|' + st;
     if (sig !== lastSig){ lastSig = sig; art.innerHTML = crSvg(c, st); }
     nameP.textContent = crName(c, st);
     prog.textContent = n + '/' + CR_MAX;
+    nth.textContent = C.nth.replace('{n}', String(crGen()));
     left.textContent = full ? C.stay : (left1 > 0 ? C.left.replace('{n}', String(left1)) : C.done);
     buttons.forEach(function(b){ b.disabled = full || left1 < 1 || !N.authOk; });
   };
@@ -2750,7 +2789,7 @@ function creatureBox(){
     if (!art.isConnected){ clearInterval(tick); return; }
     if (widgets.creature) widgets.creature();
   }, 30000);
-  return h('div',{class:'tvwrap',style:'width:100%'}, art, nameP, prog, left, btns, said);
+  return h('div',{class:'tvwrap',style:'width:100%'}, art, nameP, prog, nth, left, btns, said, albBtn, albBox);
 }
 
 /* ===== 책 읽기 (서재): 분야마다 한 사람, 전체 3명까지. 책은 읽기 시작할 때 랜덤으로 정해진다 ===== */
@@ -3310,7 +3349,7 @@ try {
     if (!snap.exists()){ S.creature = null; crEnsure(); }
     else {
       var x = snap.data({ serverTimestamps: 'estimate' });
-      S.creature = { c0: x.c0, c1: x.c1, c2: x.c2, c3: x.c3, c4: x.c4, fin: x.fin ? tsMs(x.fin) : 0 };
+      S.creature = { c0: x.c0, c1: x.c1, c2: x.c2, c3: x.c3, c4: x.c4, fin: x.fin ? tsMs(x.fin) : 0, gen: Math.max(1, Math.floor(Number(x.gen)) || 1) };
     }
     redraw('creature');
   }, featureOff('creature'));
