@@ -57,6 +57,7 @@ button{font:inherit; color:inherit}
   .plan > .room[data-open="true"][data-room="kitchen"]{grid-column:1 / -1 !important}
   .room[data-open="true"][data-room="living"] .room-body{
     display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); align-content:start}
+  .room[data-open="true"][data-room="living"] .room-body > :nth-child(1){grid-column:1 / -1}
   .room[data-open="true"][data-room="kitchen"] .room-body{
     display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); align-content:start}
   .room[data-open="true"][data-room="entry"] .room-body{
@@ -370,6 +371,13 @@ body.hw{
 .skywin .hill{position:absolute; left:0; right:0; bottom:0; height:22px; background:#0b0f1a; clip-path:polygon(0 60%,15% 30%,32% 55%,50% 20%,70% 50%,88% 25%,100% 55%,100% 100%,0 100%); z-index:1}
 .skywin .passby{position:absolute; top:46%; left:-12%; font-size:22px; z-index:2}
 .skywin .passby.go{animation:passby 7s linear forwards}
+.chatlog{width:100%; box-sizing:border-box; height:190px; overflow-y:auto; display:flex; flex-direction:column; gap:5px; padding:8px 10px; background:var(--room-deep); border:1px solid var(--line); border-radius:4px}
+.chatmsg{display:flex; gap:8px; font-size:13px; line-height:1.5}
+.chatmsg b{min-width:54px; max-width:90px; color:var(--teal); font-weight:600; overflow-wrap:anywhere}
+.chatmsg.me b{color:var(--crimson)}
+.chatmsg span{flex:1; min-width:0; overflow-wrap:anywhere}
+.chatmsg small{color:var(--muted); font-size:11px; white-space:nowrap}
+.chatsys{color:var(--muted); font-style:italic; text-align:center; font-size:12px}
 .rack{display:flex; gap:3px; height:44px; align-items:flex-end; width:100%}
 .rack i{flex:1; max-width:14px; height:100%; background:#2d3544; border-radius:1px}
 .rack .rc1{background:#3a3f50; height:92%} .rack .rc2{background:#343a4a; height:96%} .rack .rc3{background:#2a303d; height:88%}
@@ -429,14 +437,14 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-33)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-34)</p>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
 <script type="module">
 /* ============================================================
    목차 (아래 제목을 검색해서 찾아가세요)
-   글 내용(CONTENT) · 도구 · 공유 저장소 · 텔레비전 · 현관 · 거실 · 부엌 · 식탁
+   글 내용(CONTENT) · 도구 · 공유 저장소 · 텔레비전 · 현관 · 거실(채팅 포함) · 부엌 · 식탁
    마커판 · 서재(서가·창가·책상·음반), 다용도실 · 방 열고 닫기 · 소파/찬장/싱크대/냉장고 · 할로윈 사탕
    쿠키·간식 칸 · 기분 구슬 · 크리쳐 상자 · 책 읽기 · 칭찬과 고발 노트 · 객식구 복도
    가끔 일어나는 일 · 할로윈 스킨 · 공유 저장소 연결(맨 아래, 문서 구독)
@@ -885,6 +893,19 @@ var CONTENT = {
     {name:'심판', up:'미뤄둔 일을 다시 꺼낼 때. 용서하거나 용서받을 일이 있다.', rev:'자책이 길어진다. 이미 지난 일은 이제 그만두자.'},
     {name:'세계', up:'하나가 완성되는 날. 마무리를 짓고 한숨 돌리자.', rev:'마지막 한 조각이 빠졌다. 끝내지 못한 일 하나를 확인하자.'}
   ],
+  chat: {
+    title: '실시간 채팅',
+    hours: 3, max: 30, gapMs: 2000,
+    openBtn: '채팅 열기', closeBtn: '채팅 닫기',
+    hint: '열어 둔 동안만 새 글이 들어옵니다. 글은 3시간 뒤 사라져요.',
+    warn: '트래픽이 많으면 서버가 닫힙니다. 단문 연타는 삼가 주세요.',
+    head: '— 최근 3시간의 글 —',
+    empty: '아직 아무도 말하지 않았다.',
+    wait: '조금만 천천히요.',
+    fail: '지금은 보낼 수 없어요.',
+    lost: '채팅이 끊겼어요. 닫았다가 다시 열어 주세요.',
+    notReady: '채팅은 아직 준비 중이에요.'
+  },
   studyRoom: {
     desk: [
       '만년필 뚜껑이 열려 있다. 메모지 한 장이 반쯤 쓰여 있다.',
@@ -1230,6 +1251,7 @@ function mountEntry(body){
 function mountLiving(body){
   var items = pickN(CONTENT.tableItems, Math.floor(Math.random()*3));
   body.append(
+    obj(CONTENT.chat.title, chatBox()),
     obj('꽃병', vaseBox()),
     obj('텔레비전', tvBox()),
     obj('책상 위 전화', phoneBox()),
@@ -1241,6 +1263,93 @@ function mountLiving(body){
       h('div',{class:'subsofa'}, h('div',{class:'fcap'}, '1인용 소파 2'), sofaBox('sofa3')))
   );
   armScare();
+}
+
+/* ===== 실시간 채팅 (거실): 열어 둔 동안만 최근 3시간의 글을 받는다. 닫거나 방을 접거나 탭이 가려지면 연결을 끊는다 ===== */
+var CH = { open: false, unsub: null, rows: [], mine: lsGet('crowley.chatmine', []), last: 0 };
+function chatClock(ms){
+  var d = new Date(ms), p = function(n){ return (n < 10 ? '0' : '') + n; };
+  return p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function chatBox(){
+  var C = CONTENT.chat;
+  var log = h('div',{class:'chatlog',role:'log','aria-live':'polite'});
+  var status = h('p',{class:'hint'}, C.hint);
+  var nameI = h('input',{type:'text',maxlength:'12',placeholder:'이름',autocomplete:'off','aria-label':'채팅 이름'});
+  nameI.value = lsGet('crowley.chatname', '');
+  var textI = h('input',{type:'text',maxlength:'60',placeholder:'말하기',autocomplete:'off','aria-label':'채팅 내용'});
+  var form = h('form',{class:'row',onsubmit:send}, nameI, textI, h('button',{class:'btn',type:'submit'},'보내기'));
+  var warn = h('p',{class:'hint'}, C.warn);
+  var panel = h('div',{class:'tvwrap',style:'width:100%'}, log, form, warn);
+  panel.hidden = true;
+  var toggle = h('button',{class:'btn',type:'button',onclick:function(){ setOpen(!CH.open); }}, C.openBtn);
+  var root = h('div',{class:'tvwrap',style:'width:100%'}, toggle, panel, status);
+  function render(){
+    var cut = Date.now() - C.hours * 3600000;
+    var rows = CH.rows.filter(function(r){ return r.ts > cut; });
+    var near = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+    var kids = [h('div',{class:'chatsys'}, C.head)];
+    if (!rows.length) kids.push(h('div',{class:'chatsys'}, C.empty));
+    rows.forEach(function(r){
+      kids.push(h('div',{class:'chatmsg' + (CH.mine.indexOf(r.id) >= 0 ? ' me' : '')},
+        h('b',null,r.n), h('span',null,r.t), h('small',null,chatClock(r.ts))));
+    });
+    log.replaceChildren.apply(log, kids);
+    if (near) log.scrollTop = log.scrollHeight;
+  }
+  function subscribe(){
+    if (CH.unsub || !(canShare && fs) || S.off.chat) return;
+    var from = new Date(Date.now() - C.hours * 3600000);
+    CH.unsub = onSnapshot(query(collection(fs, 'chat'), where('ts', '>', from), orderBy('ts', 'desc'), limit(C.max)), function(snap){
+      CH.rows = snap.docs.map(function(d){
+        var x = d.data({ serverTimestamps: 'estimate' });
+        return { id: d.id, n: String(x.n || '').slice(0, 12), t: String(x.t || '').slice(0, 60), ts: tsMs(x.ts) };
+      }).reverse();
+      render();
+    }, function(){
+      CH.unsub = null; CH.open = false; panel.hidden = true; toggle.textContent = C.openBtn; status.textContent = C.lost;
+    });
+  }
+  function unsubscribe(){ if (CH.unsub){ CH.unsub(); CH.unsub = null; } }
+  function setOpen(v){
+    CH.open = v;
+    panel.hidden = !v;
+    toggle.textContent = v ? C.closeBtn : C.openBtn;
+    status.textContent = C.hint;
+    if (v){ render(); subscribe(); textI.focus(); } else { unsubscribe(); }
+  }
+  async function send(e){
+    e.preventDefault();
+    var t = textI.value.trim();
+    if (!t) return;
+    var now = Date.now();
+    if (now - CH.last < C.gapMs){ status.textContent = C.wait; return; }
+    CH.last = now;
+    var n = nameI.value.trim() || '이름 없는 손님';
+    lsSet('crowley.chatname', nameI.value.trim());
+    textI.value = '';
+    status.textContent = C.hint;
+    try {
+      var ref = await addDoc(collection(fs, 'chat'), { n: n.slice(0, 12), t: t.slice(0, 60), ts: serverTimestamp() });
+      CH.mine = CH.mine.concat([ref.id]).slice(-40);
+      lsSet('crowley.chatmine', CH.mine);
+      render();
+    } catch(err){ status.textContent = C.fail; }
+  }
+  widgets.chat = function(){
+    var off = !(canShare && fs) || S.off.chat;
+    toggle.disabled = off;
+    if (off){ status.textContent = C.notReady; if (CH.open) setOpen(false); }
+  };
+  widgets.chat();
+  var tick = setInterval(function(){
+    if (!root.isConnected){ clearInterval(tick); unsubscribe(); CH.open = false; return; }
+    if (!CH.open) return;
+    if (document.hidden){ unsubscribe(); return; }
+    if (!CH.unsub) subscribe();
+    render();
+  }, 1500);
+  return root;
 }
 
 /* ===== 부엌 ===== */
@@ -1812,7 +1921,7 @@ function mountBack(body){ body.append(h('div',{class:'obj'}, descBox('블랙 타
 
 /* ===== 방 열고 닫기 ===== */
 var ROOMS = {
-  living:  { mount: mountLiving,  widgets:['tv','marker','sofa','sofa2','sofa3','vase'] },
+  living:  { mount: mountLiving,  widgets:['chat','tv','marker','sofa','sofa2','sofa3','vase'] },
   entry:   { mount: mountEntry,   widgets:['guestbook','door','mood','marbles','creature'] },
   kitchen: { mount: mountKitchen, widgets:['board','fridge','pantry','cookies','snacks','table'] },
   study:   { mount: mountStudy,   widgets:['reading'] },
