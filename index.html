@@ -464,7 +464,7 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-38)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-39)</p>
   <div class="ckpop" id="ckpop" role="dialog" aria-label="클리커" hidden></div>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
@@ -793,6 +793,9 @@ var CONTENT = {
     mixed: '아롱이',
     traits: ['꽃을 꽂은', '불꽃을 쓴', '두루마리를 안은', '그림자를 끄는', '거미줄 망토를 두른'],
     egg: '아직 알이다.',
+    pet: '쓰다듬기',
+    pets: ['{x}이(가) 눈을 가늘게 떴다. 행복해 보인다.', '{x}이(가) 손 아래에서 가만히 있다. 기분이 좋은 것 같다.', '{x}이(가) 조금 들썩였다. 행복해졌다.', '{x}이(가) 작게 몸을 떨며 기뻐한다.'],
+    petsEgg: ['알이 따뜻하다. 안에서 뭔가 기뻐하는 기분이 든다.', '알을 쓰다듬었다. 살짝 흔들린 것 같다.'],
     baby: '아기 ',
     growing: '무럭무럭 자라는 중이다.',
     left: '오늘 넣을 수 있는 재료 {n}개',
@@ -1556,7 +1559,17 @@ function clickerTry(){
   CK.items.push({ k: k, n: 0 }); CK.seen = true; ckSave(); ckRender();
   candyToast((rare ? C.foundRare : C.found).replace('{n}', ckName(k)));
 }
-function acted(key){ var got = candyTry(key); clickerTry(); return got; }
+function acted(key){ return candyTry(key); }
+/* 집 안의 모든 버튼(설명 보기·산책·타로·방명록 등)을 누를 때마다 클리커를 주울 기회. 방 여닫기는 제외 */
+(function(){
+  var plan = document.getElementById('plan');
+  if (!plan) return;
+  plan.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('button');
+    if (!b || b.disabled || b.closest('.room-head')) return;
+    clickerTry();
+  });
+})();
 function clkTableBox(){
   var C = CONTENT.clicker;
   var line = h('p',{class:'flavor'});
@@ -2961,6 +2974,10 @@ function creatureBox(){
   var left = h('p',{class:'hint'});
   var said = h('p',{class:'flavor','aria-live':'polite'});
   var btns = h('div',{class:'crbtns'});
+  var petBtn = h('button',{class:'btn',type:'button',onclick:function(){
+    var c = crCounts(), n = crSum(c);
+    said.textContent = n < 1 ? pick(C.petsEgg) : pick(C.pets).replace('{x}', crName(c, crStage(n)));
+  }}, C.pet);
   var nth = h('p',{class:'hint crprog'});
   var albBtn = h('button',{class:'btn',type:'button',onclick:function(){ toggleAlbum(); }}, C.albumOpen);
   var albBox = h('div',{class:'cralbum'});
@@ -3006,10 +3023,10 @@ function creatureBox(){
   widgets.creature = function(){
     var off = !(canShare && fs) || S.off.creature;
     if (off){
-      art.textContent = ''; nameP.textContent = ''; prog.textContent = ''; left.textContent = C.notReady; btns.hidden = true; lastSig = 'off';
+      art.textContent = ''; nameP.textContent = ''; prog.textContent = ''; left.textContent = C.notReady; btns.hidden = true; petBtn.hidden = true; lastSig = 'off';
       return;
     }
-    btns.hidden = false;
+    btns.hidden = false; petBtn.hidden = false;
     if (crExpired() && !crResetting){
       crResetting = true;
       crRollOver().then(function(){ setTimeout(function(){ crResetting = false; }, 5000); });
@@ -3028,7 +3045,7 @@ function creatureBox(){
     if (!art.isConnected){ clearInterval(tick); return; }
     if (widgets.creature) widgets.creature();
   }, 30000);
-  return h('div',{class:'tvwrap',style:'width:100%'}, art, nameP, prog, nth, left, btns, said, albBtn, albBox);
+  return h('div',{class:'tvwrap',style:'width:100%'}, art, nameP, prog, nth, left, btns, petBtn, said, albBtn, albBox);
 }
 
 /* ===== 책 읽기 (서재): 분야마다 한 사람, 전체 3명까지. 책은 읽기 시작할 때 랜덤으로 정해진다 ===== */
