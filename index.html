@@ -53,6 +53,7 @@ button{font:inherit; color:inherit}
   .plan > .room[data-room="front"], .plan > .room[data-room="study"], .plan > .room[data-room="util"]{grid-column:1 / span 1 !important}
   .plan > .room[data-room="entry"]{grid-column:2 / span 2 !important}
   .plan > .room[data-open="true"][data-room="living"],
+  .plan > .room[data-open="true"][data-room="study"],
   .plan > .room[data-open="true"][data-room="kitchen"]{grid-column:1 / -1 !important}
   .room[data-open="true"][data-room="living"] .room-body{
     display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); align-content:start}
@@ -60,6 +61,12 @@ button{font:inherit; color:inherit}
     display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); align-content:start}
   .room[data-open="true"][data-room="entry"] .room-body{
     display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.7fr); align-content:start}
+  .room[data-open="true"][data-room="study"] .room-body{
+    display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); align-content:start}
+  .room[data-open="true"][data-room="study"] .room-body > :nth-child(1){grid-column:1; grid-row:1 / span 2}
+  .room[data-open="true"][data-room="study"] .room-body > :nth-child(2){grid-column:2; grid-row:1; border-left:1px dashed var(--line)}
+  .room[data-open="true"][data-room="study"] .room-body > :nth-child(3){grid-column:2; grid-row:2; border-left:1px dashed var(--line)}
+  .room[data-open="true"][data-room="study"] .room-body > :nth-child(4){grid-column:1 / -1; grid-row:3}
   .room[data-open="true"][data-room="kitchen"] .room-body > :nth-child(1){grid-column:1; grid-row:1}
   .room[data-open="true"][data-room="kitchen"] .room-body > :nth-child(2){grid-column:2; grid-row:1}
   .room[data-open="true"][data-room="kitchen"] .room-body > :nth-child(3){grid-column:1; grid-row:2}
@@ -364,7 +371,7 @@ body.hw{
 .skywin .passby{position:absolute; top:46%; left:-12%; font-size:22px; z-index:2}
 .skywin .passby.go{animation:passby 7s linear forwards}
 .rack{display:flex; gap:3px; height:44px; align-items:flex-end; width:100%}
-.rack i{flex:1; max-width:8px; height:100%; background:#2d3544; border-radius:1px}
+.rack i{flex:1; max-width:14px; height:100%; background:#2d3544; border-radius:1px}
 .rack .rc1{background:#3a3f50; height:92%} .rack .rc2{background:#343a4a; height:96%} .rack .rc3{background:#2a303d; height:88%}
 @keyframes twinkle{50%{opacity:.3}}
 @keyframes passby{from{left:-12%}to{left:104%}}
@@ -422,7 +429,7 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-32)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-33)</p>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
