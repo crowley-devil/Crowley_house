@@ -68,7 +68,8 @@ button{font:inherit; color:inherit}
   .room[data-open="true"][data-room="entry"] .room-body > :nth-child(2){grid-column:1; grid-row:2}
   .room[data-open="true"][data-room="entry"] .room-body > :nth-child(3){grid-column:1; grid-row:3}
   .room[data-open="true"][data-room="entry"] .room-body > :nth-child(4){grid-column:2; grid-row:1 / span 3; border-left:1px dashed var(--line)}
-  .room[data-open="true"][data-room="entry"] .room-body > :nth-child(5){grid-column:1 / -1; grid-row:4}
+  .room[data-open="true"][data-room="entry"] .room-body > :nth-child(5){grid-column:1; grid-row:4}
+  .room[data-open="true"][data-room="entry"] .room-body > :nth-child(6){grid-column:2; grid-row:4; border-left:1px dashed var(--line)}
   .room[data-open="true"][data-room="kitchen"] .room-body > :nth-child(5){grid-column:1; grid-row:3}
   .room[data-open="true"][data-room="kitchen"] .room-body > :nth-child(6){grid-column:2; grid-row:3}
   .room[data-open="true"] .room-body > .obj{min-width:0; align-content:start}
@@ -236,6 +237,11 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .mb.new{animation:mbdrop .8s ease-out both}
 @keyframes mbdrop{from{background:#cfd6df; transform:translateY(-22px)} to{background:var(--jc); transform:none}}
 @media (prefers-reduced-motion:reduce){ .mb.new{animation:none} }
+.crart{width:100%}
+.crart svg{width:150px; height:150px; display:block; margin:0 auto}
+.crname{margin:0; width:100%; text-align:center; font-family:var(--f-disp); font-size:16px; min-height:1.5em}
+.crprog{margin:0; width:100%; text-align:center}
+.crbtns{width:100%; display:flex; flex-wrap:wrap; gap:6px; justify-content:center}
 .subslot{border-top:1px dashed var(--line); padding-top:6px; display:grid; gap:6px}
 .readline{margin:0; font-family:var(--f-disp)}
 .seats{display:flex; align-items:center; gap:8px}
@@ -394,7 +400,7 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-29)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-30)</p>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
@@ -700,6 +706,23 @@ var CONTENT = {
     closed: '책을 덮었다.',
     cant: '지금은 읽을 수 없어요.',
     notReady: '책 읽기는 아직 준비 중이에요.'
+  },
+  creature: {
+    title: '크리쳐 상자', perDay: 1,
+    ings: ['마른 제라늄 가루', '식은 촛농', '아주 작은 두루마리', '그림자 한 줌', '설탕 뿌린 거미줄'],
+    bodies: ['꽃머리', '촛농이', '두루말이', '그림자', '거미실'],
+    mixed: '아롱이',
+    traits: ['꽃을 꽂은', '불꽃을 쓴', '두루마리를 안은', '그림자를 끄는', '거미줄 망토를 두른'],
+    egg: '아직 알이다.',
+    baby: '아기 ',
+    growing: '무럭무럭 자라는 중이다.',
+    left: '오늘 넣을 수 있는 재료 {n}개',
+    done: '오늘은 이미 하나 넣었다. 내일 또 와 주세요.',
+    fed: '“{x}” 하나를 넣었다.',
+    grown: '크리쳐가 다 자랐다.',
+    stay: '하루 동안 이 모습으로 지내다가 새 알로 바뀐다.',
+    fail: '지금은 넣을 수 없어요.',
+    notReady: '크리쳐 상자는 아직 준비 중이에요.'
   },
   table: {
     seats: 3, mins: 20,
@@ -1135,6 +1158,7 @@ function mountEntry(body){
     obj('현관에 놓인 것', h('p',{class:'flavor'}, shoesNow().join(', ') + '.')),
     obj('오늘의 기분', moodBox()),
     obj('기분 구슬', marbleBox()),
+    obj('크리쳐 상자', creatureBox()),
     obj('방명록', guestbookBox())
   );
 }
@@ -1691,7 +1715,7 @@ function mountBack(body){ body.append(h('div',{class:'obj'}, descBox('블랙 타
 /* ===== 방 열고 닫기 ===== */
 var ROOMS = {
   living:  { mount: mountLiving,  widgets:['tv','marker','sofa','sofa2','sofa3','vase','reading'] },
-  entry:   { mount: mountEntry,   widgets:['guestbook','door','mood','marbles'] },
+  entry:   { mount: mountEntry,   widgets:['guestbook','door','mood','marbles','creature'] },
   kitchen: { mount: mountKitchen, widgets:['board','fridge','pantry','cookies','snacks','table'] },
   study:   { mount: mountStudy,   widgets:['knock'] },
   util:    { mount: mountUtil,    widgets:[] },
@@ -2202,7 +2226,7 @@ function moodBox(){
 }
 
 /* ===== 쿠키 칸, 간식 칸 (찬장 아래): 5종 중 2종, 종류마다 5개. 접시는 남지 않는다 ===== */
-S.cookies = null; S.snacks = null; S.marbles = null; S.reading = {}; S.tseat = [null, null, null]; S.tplate = null;
+S.cookies = null; S.snacks = null; S.marbles = null; S.creature = null; S.reading = {}; S.tseat = [null, null, null]; S.tplate = null;
 var STOCK_N = 5, stockInit = {};
 function stockOk(key){ return !!(canShare && fs && !S.off[key]); }
 function stockEnsure(key){
@@ -2334,6 +2358,186 @@ function marbleBox(){
     if (widgets.marbles) widgets.marbles();
   }, 30000);
   return h('div',{class:'tvwrap',style:'width:100%'}, left, grid, said);
+}
+
+/* ===== 크리쳐 상자 (현관): 재료 5가지를 하루 한 사람이 하나씩 넣는다. 30개가 되면 다 자라고, 하루 뒤 새 알로 바뀐다 ===== */
+var CR_PAL = [[210,78,156],[241,217,168],[216,168,80],[70,52,140],[159,213,238]];
+var CR_IRIS = ['#ff8fcf', '#ffe9b5', '#9ff0ff', '#8a4dff', '#6fb4ff'];
+var CR_MAX = 30, CR_ID = 0, CR_DAY = 86400000;
+function crSum(c){ return c.reduce(function(a, b){ return a + b; }, 0); }
+function crRaw(){
+  var d = S.creature, out = [0, 0, 0, 0, 0];
+  if (d){ for (var i = 0; i < 5; i++) out[i] = Math.max(0, Number(d['c' + i]) || 0); }
+  return out;
+}
+/* 다 자란 뒤 하루가 지났으면 화면에서는 새 알로 본다(실제 초기화는 누군가의 브라우저가 한 번 한다) */
+function crExpired(){
+  var d = S.creature;
+  return !!(d && d.fin && Date.now() >= d.fin + CR_DAY && crSum(crRaw()) >= CR_MAX);
+}
+function crCounts(){ return crExpired() ? [0, 0, 0, 0, 0] : crRaw(); }
+function crStage(n){ return n < 4 ? 0 : n < 12 ? 1 : n < 30 ? 2 : 3; }
+function crAnalyze(c){
+  var n = crSum(c), o = c.map(function(v, i){ return [v, i]; }).sort(function(a, b){ return b[0] - a[0] || a[1] - b[1]; });
+  var d = o[0][1], e = o[1][1];
+  var s1 = n ? c[d] / n : 0, s2 = n ? c[e] / n : 0;
+  return { n: n, d: s1 < 0.30 ? -1 : d, e: s2 >= 0.20 ? e : -1 };
+}
+function crName(c, st){
+  var C = CONTENT.creature, A = crAnalyze(c);
+  var base = A.d < 0 ? C.mixed : C.bodies[A.d];
+  if (st === 0) return C.egg;
+  if (st === 1) return C.baby + base;
+  if (st === 2) return C.growing;
+  return (A.e >= 0 ? C.traits[A.e] + ' ' : '') + base;
+}
+function crMix(c){
+  var n = crSum(c) || 1, r = 0, g = 0, b = 0;
+  c.forEach(function(k, i){ r += CR_PAL[i][0] * k; g += CR_PAL[i][1] * k; b += CR_PAL[i][2] * k; });
+  return [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
+}
+function crRgb(c, k){ k = k || 1; return 'rgb(' + c.map(function(v){ return Math.min(255, Math.round(v * k)); }).join(',') + ')'; }
+function crTint(c, t, k){ return c.map(function(v, i){ return Math.round(v * (1 - k) + t[i] * k); }); }
+function crEyes(x, y, iris){
+  return [-9, 9].map(function(dx){
+    return '<ellipse cx="' + (x + dx) + '" cy="' + y + '" rx="5.2" ry="6.2" fill="#0f0a1c"/><ellipse cx="' + (x + dx) + '" cy="' + (y + 1) + '" rx="3.4" ry="4.4" fill="' + iris + '" opacity=".9"/><circle cx="' + (x + dx - 1.6) + '" cy="' + (y - 2) + '" r="1.7" fill="#fff"/><circle cx="' + (x + dx + 1.4) + '" cy="' + (y + 2.4) + '" r=".8" fill="#fff" opacity=".8"/>';
+  }).join('');
+}
+function crDefs(id, c){
+  var hi = crRgb(crTint(c.map(function(v){ return Math.min(255, v * 1.35); }), [150,235,255], .4));
+  var lo = crRgb(crTint(c.map(function(v){ return v * .62; }), [110,70,210], .45));
+  var mid = crRgb(crTint(c, [205,160,255], .16));
+  return '<defs><radialGradient id="g' + id + '" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="' + hi + '"/><stop offset=".55" stop-color="' + mid + '"/><stop offset="1" stop-color="' + lo + '"/></radialGradient>' +
+    '<radialGradient id="a' + id + '" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#b9a4ff" stop-opacity=".5"/><stop offset="1" stop-color="' + hi + '" stop-opacity="0"/></radialGradient>' +
+    '<filter id="f' + id + '" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"/></filter></defs>';
+}
+function crBody(d, c, id){
+  var F = 'url(#g' + id + ')', rim = crRgb(c, 1.5), iris = d < 0 ? '#ffe9b5' : CR_IRIS[d];
+  var glow = '<circle cx="60" cy="68" r="52" fill="url(#a' + id + ')"/>';
+  var rs = ' stroke="' + rim + '" stroke-width=".8" stroke-opacity=".7"';
+  var i, a, x, y, p = '';
+  if (d === 0){
+    for (i = 0; i < 7; i++){
+      a = (-90 + (i - 3) * 30) * Math.PI / 180; x = 60 + Math.cos(a) * 25; y = 56 + Math.sin(a) * 25;
+      p += '<ellipse cx="' + x + '" cy="' + y + '" rx="12" ry="14" fill="' + F + '"' + rs + ' transform="rotate(' + (-90 + (i - 3) * 30 + 90) + ' ' + x + ' ' + y + ')"/><path d="M' + x + ' ' + y + 'l' + (Math.cos(a) * 8) + ' ' + (Math.sin(a) * 8) + '" stroke="' + crRgb(c, .55) + '" stroke-width=".8" opacity=".5"/>';
+    }
+    return glow + p + '<ellipse cx="60" cy="74" rx="29" ry="26" fill="' + F + '"' + rs + '/><circle cx="60" cy="52" r="3" fill="#ffe9a8"/>' + crEyes(60, 74, iris);
+  }
+  if (d === 1) return glow + '<path d="M60 18C52 38 30 56 30 78c0 15 12 24 30 24s30-9 30-24C90 56 68 38 60 18z" fill="' + F + '"' + rs + '/><path d="M42 70c0-10 6-18 12-26" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".35" fill="none"/><path d="M38 96v12M60 100v14M82 96v8" stroke="' + crRgb(c, .95) + '" stroke-width="8" stroke-linecap="round"/><circle cx="38" cy="110" r="4" fill="' + crRgb(c, 1.1) + '"/><circle cx="60" cy="116" r="4.5" fill="' + crRgb(c, 1.1) + '"/>' + crEyes(60, 74, iris);
+  if (d === 2) return glow + '<rect x="38" y="30" width="44" height="68" rx="7" fill="' + F + '"' + rs + '/><ellipse cx="60" cy="30" rx="22" ry="8" fill="' + crRgb(c, 1.3) + '" stroke="' + rim + '" stroke-width=".8"/><ellipse cx="60" cy="30" rx="12" ry="3.5" fill="none" stroke="' + crRgb(c, .6) + '" stroke-width="1"/><ellipse cx="60" cy="98" rx="22" ry="8" fill="' + crRgb(c, .7) + '"/><path d="M44 46q4-3 8 0t8 0 8 0 6 0M44 54q4-3 8 0t8 0" stroke="#ffe9a8" stroke-width="1.2" fill="none" opacity=".7"/><rect x="38" y="84" width="44" height="5" fill="#e9c46a" opacity=".85"/>' + crEyes(60, 70, iris);
+  if (d === 3){
+    var st = '';
+    for (i = 0; i < 9; i++) st += '<circle cx="' + (34 + ((i * 37) % 52)) + '" cy="' + (40 + ((i * 23) % 52)) + '" r="' + (.8 + (i % 3) * .5) + '" fill="#cfeaff" opacity=".75"/>';
+    return glow + '<path d="M24 98C18 58 36 24 60 24s42 34 36 74c-6-6-10 5-18-2s-9 7-18 0-10 7-18 0-12 4-18 2z" fill="' + F + '" stroke="' + rim + '" stroke-width=".8" stroke-opacity=".6"/>' + st + '<path d="M24 98l-5 12M96 98l6 11M42 102v10M78 102v8" stroke="' + crRgb(c, .9) + '" stroke-width="4.5" stroke-linecap="round" opacity=".55"/>' + crEyes(60, 64, iris);
+  }
+  if (d === 4){
+    var l = '';
+    for (i = 0; i < 8; i++){
+      a = (i * 45 + 22) * Math.PI / 180;
+      var ex = 60 + Math.cos(a) * 56, ey = 70 + Math.sin(a) * 46;
+      l += '<path d="M' + (60 + Math.cos(a) * 22) + ' ' + (68 + Math.sin(a) * 20) + 'Q' + (60 + Math.cos(a) * 42) + ' ' + (68 + Math.sin(a) * 30 - 8) + ' ' + ex + ' ' + ey + '" stroke="' + crRgb(c, .8) + '" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="' + ex + '" cy="' + ey + '" r="2.4" fill="#dff6ff"/>';
+    }
+    return glow + l + '<circle cx="60" cy="68" r="27" fill="' + F + '"' + rs + '/><path d="M60 41v54M33 68h54M41 49l38 38M79 49 41 87" stroke="#fff" stroke-width=".7" opacity=".35"/><circle cx="60" cy="68" r="14" fill="none" stroke="#fff" stroke-width=".7" opacity=".3"/>' + crEyes(60, 66, iris);
+  }
+  return glow + '<circle cx="42" cy="80" r="20" fill="' + F + '"/><circle cx="78" cy="80" r="20" fill="' + crRgb(c, .7) + '" opacity=".95"/><circle cx="60" cy="56" r="22" fill="' + crRgb(c, 1.25) + '"/><circle cx="60" cy="80" r="22" fill="' + F + '" stroke="' + rim + '" stroke-width=".8" stroke-opacity=".6"/><circle cx="30" cy="62" r="2" fill="#fff" opacity=".6"/><circle cx="90" cy="64" r="1.6" fill="#fff" opacity=".6"/>' + crEyes(60, 72, iris);
+}
+function crTrait(e){
+  var i, p = '';
+  if (e === 0){
+    for (i = 0; i < 5; i++) p += '<ellipse cx="' + (Math.cos(i * 1.256) * 6.5) + '" cy="' + (Math.sin(i * 1.256) * 6.5) + '" rx="5" ry="4.2" fill="#f06fb4" transform="rotate(' + (i * 72) + ' ' + (Math.cos(i * 1.256) * 6.5) + ' ' + (Math.sin(i * 1.256) * 6.5) + ')"/>';
+    return '<g transform="translate(88 24)"><circle r="12" fill="#ff8ccf" opacity=".25"/>' + p + '<circle r="2.6" fill="#ffe9a8"/></g>';
+  }
+  if (e === 1) return '<circle cx="60" cy="18" r="13" fill="#ffc46b" opacity=".22"/><path d="M60 5c-7 8-9 14-9 19a9 9 0 0018 0c0-5-2-11-9-19z" fill="#ffb347"/><path d="M60 14c-3 5-4 7-4 10a4 4 0 008 0c0-3-1-5-4-10z" fill="#fff0b0"/>';
+  if (e === 2) return '<g transform="translate(90 94) rotate(18)"><circle r="14" fill="#ffd47a" opacity=".2"/><rect x="-6" y="-14" width="12" height="28" rx="3" fill="#ecc985"/><ellipse cx="0" cy="-14" rx="6" ry="3" fill="#fbe9bf"/><rect x="-6" y="-2" width="12" height="3" fill="#c9694b"/><path d="M-3 4h6M-3 8h4" stroke="#8a6a3a" stroke-width=".8"/></g>';
+  if (e === 3) return '<path d="M88 100c20 2 27-14 15-26-3 9-9 14-15 15z" fill="#3a2d7a" opacity=".9"/><circle cx="100" cy="80" r="1.2" fill="#cfeaff"/><circle cx="96" cy="88" r=".9" fill="#cfeaff"/>';
+  return '<g stroke="#cfeeff" fill="none" stroke-width="1" opacity=".5"><path d="M14 20 60 6l46 14M14 20c4 36 0 56 6 84M106 20c-4 36 0 56-6 84"/><path d="M14 40q46 10 92 0M16 64q44 10 88 0M18 88q42 8 84 0"/></g><g fill="#eaf8ff"><circle cx="14" cy="40" r="1.8"/><circle cx="106" cy="40" r="1.8"/><circle cx="60" cy="49" r="1.8"/><circle cx="16" cy="64" r="1.6"/><circle cx="104" cy="64" r="1.6"/></g>';
+}
+function crEgg(c, id){
+  var n = crSum(c), col = n ? crMix(c) : [150, 140, 190];
+  var sp = n ? '<circle cx="50" cy="66" r="3" fill="' + crRgb(col, 1.5) + '"/><circle cx="72" cy="80" r="4" fill="' + crRgb(col, 1.5) + '"/><circle cx="58" cy="94" r="2.5" fill="' + crRgb(col, 1.5) + '"/>' : '';
+  return crDefs(id, col) + '<circle cx="60" cy="70" r="50" fill="url(#a' + id + ')"/><ellipse cx="60" cy="70" rx="28" ry="36" fill="url(#g' + id + ')" stroke="' + crRgb(col, 1.5) + '" stroke-width=".8" stroke-opacity=".7"/>' + sp + '<path d="M46 52q4-12 14-14" stroke="#fff" stroke-width="2.4" stroke-linecap="round" fill="none" opacity=".35"/>';
+}
+function crSvg(c, st){
+  var A = crAnalyze(c), id = ++CR_ID, col = crMix(c), sc = [1, .55, .8, 1][st], inner;
+  if (st === 0) inner = crEgg(c, id);
+  else {
+    inner = crDefs(id, col) + '<g opacity=".93">' + crBody(A.d, col, id) + '</g><ellipse cx="60" cy="82" rx="16" ry="11" fill="' + crRgb(crTint(col, [200,240,255], .5), 1.3) + '" opacity=".34" filter="url(#f' + id + ')"/>';
+    if (st >= 2 && A.e >= 0) inner = (A.e === 4 ? crTrait(4) + inner : inner + crTrait(A.e));
+  }
+  var spark = st === 3 ? '<g fill="#cdb8ff"><path d="M16 18l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/><path d="M104 40l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z"/><circle cx="20" cy="86" r="1.6"/><circle cx="102" cy="100" r="1.4"/><circle cx="30" cy="104" r="1"/></g>' : '';
+  var t = st === 0 ? '' : ' transform="translate(' + (60 - 60 * sc) + ' ' + ((st === 1 ? 120 : 112) - 112 * sc) + ') scale(' + sc + ')"';
+  return '<svg viewBox="0 0 120 120" role="img" aria-hidden="true"><g' + t + '>' + inner + '</g>' + spark + '</svg>';
+}
+function crLeft(){
+  var m = lsGet('crowley.creature', null);
+  var used = (m && m.day === todayKST()) ? (Number(m.used) || 0) : 0;
+  return Math.max(0, CONTENT.creature.perDay - used);
+}
+function crUse(){
+  var m = lsGet('crowley.creature', null);
+  var used = (m && m.day === todayKST()) ? (Number(m.used) || 0) : 0;
+  lsSet('crowley.creature', { day: todayKST(), used: used + 1 });
+}
+function crZero(){ return { c0: 0, c1: 0, c2: 0, c3: 0, c4: 0 }; }
+var crBusy = false, crResetting = false;
+function crEnsure(){
+  if (crBusy || !(canShare && fs) || S.off.creature) return;
+  crBusy = true;
+  setDoc(doc(fs, 'house', 'creature'), crZero()).catch(function(){}).then(function(){ setTimeout(function(){ crBusy = false; }, 5000); });
+}
+function creatureBox(){
+  var C = CONTENT.creature;
+  var art = h('div',{class:'crart'});
+  var nameP = h('p',{class:'crname','aria-live':'polite'});
+  var prog = h('p',{class:'hint crprog'});
+  var left = h('p',{class:'hint'});
+  var said = h('p',{class:'flavor','aria-live':'polite'});
+  var btns = h('div',{class:'crbtns'});
+  var feeding = false, lastSig = '';
+  var buttons = C.ings.map(function(nm, i){
+    return h('button',{class:'btn',type:'button',onclick:function(){ feed(i); }}, nm);
+  });
+  btns.append.apply(btns, buttons);
+  async function feed(i){
+    if (feeding || crLeft() < 1) return;
+    if (!(canShare && fs) || S.off.creature || !N.authOk) return;
+    var n = crSum(crCounts());
+    if (n >= CR_MAX) return;
+    feeding = true;
+    var p = {}; p['c' + i] = increment(1);
+    if (n === CR_MAX - 1) p.fin = serverTimestamp();
+    var ok = false;
+    try { await updateDoc(doc(fs, 'house', 'creature'), p); ok = true; } catch(e){}
+    feeding = false;
+    if (ok){ crUse(); said.textContent = C.fed.replace('{x}', C.ings[i]) + (n === CR_MAX - 1 ? ' ' + C.grown : ''); }
+    else said.textContent = C.fail;
+    widgets.creature();
+  }
+  widgets.creature = function(){
+    var off = !(canShare && fs) || S.off.creature;
+    if (off){
+      art.textContent = ''; nameP.textContent = ''; prog.textContent = ''; left.textContent = C.notReady; btns.hidden = true; lastSig = 'off';
+      return;
+    }
+    btns.hidden = false;
+    if (crExpired() && !crResetting){
+      crResetting = true;
+      setDoc(doc(fs, 'house', 'creature'), crZero()).catch(function(){}).then(function(){ setTimeout(function(){ crResetting = false; }, 5000); });
+    }
+    var c = crCounts(), n = crSum(c), st = crStage(n), full = n >= CR_MAX, left1 = crLeft();
+    var sig = c.join(',') + '|' + st;
+    if (sig !== lastSig){ lastSig = sig; art.innerHTML = crSvg(c, st); }
+    nameP.textContent = crName(c, st);
+    prog.textContent = n + '/' + CR_MAX;
+    left.textContent = full ? C.stay : (left1 > 0 ? C.left.replace('{n}', String(left1)) : C.done);
+    buttons.forEach(function(b){ b.disabled = full || left1 < 1 || !N.authOk; });
+  };
+  widgets.creature();
+  var tick = setInterval(function(){
+    if (!art.isConnected){ clearInterval(tick); return; }
+    if (widgets.creature) widgets.creature();
+  }, 30000);
+  return h('div',{class:'tvwrap',style:'width:100%'}, art, nameP, prog, left, btns, said);
 }
 
 /* ===== 책 읽기 (거실): 분야마다 한 사람, 전체 3명까지. 책은 읽기 시작할 때 랜덤으로 정해진다 ===== */
@@ -2923,6 +3127,14 @@ try {
       redraw(key);
     }, featureOff(key));
   });
+  onSnapshot(doc(fs, 'house', 'creature'), function(snap){
+    if (!snap.exists()){ S.creature = null; crEnsure(); }
+    else {
+      var x = snap.data({ serverTimestamps: 'estimate' });
+      S.creature = { c0: x.c0, c1: x.c1, c2: x.c2, c3: x.c3, c4: x.c4, fin: x.fin ? tsMs(x.fin) : 0 };
+    }
+    redraw('creature');
+  }, featureOff('creature'));
   onSnapshot(doc(fs, 'house', 'marbles'), function(snap){ S.marbles = snap.exists() ? snap.data() : null; redraw('marbles'); }, featureOff('marbles'));
   [0, 1, 2].forEach(function(i){
     onSnapshot(doc(fs, 'table', 'seat' + i), function(snap){
