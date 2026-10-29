@@ -437,7 +437,7 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-34)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-35)</p>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
 
@@ -486,6 +486,7 @@ var CONTENT = {
 
 
   ],
+  tvAway: '벽 쪽으로 돌려 놓은 텔레비전.',
   tvScare: '…끄라고 했을 텐데.',
   drama: [
     '채널 7. 드라마 재방송. 두 사람이 비 오는 창가에서 말없이 서 있다.',
@@ -1028,7 +1029,7 @@ function redrawAll(){ Object.keys(widgets).forEach(redraw); }
 function sharedHint(){ return canShare ? '' : '여기 남긴 흔적은 지금 내 브라우저에만 보여요.'; }
 
 /* ===== 텔레비전 ===== */
-var tv = { state:'off', kind:'msg', msg:'', t:null, d:null, armed:false };
+var tv = { state:'off', kind:'msg', msg:'', t:null, d:null, armed:false, away: lsGet('crowley.tvaway', false) === true };
 function tvSync(){
   redraw('tv');
   $('[data-room="living"]').dataset.tv = tv.state;
@@ -1047,7 +1048,7 @@ function armScare(){
 }
 function tvOff(){ disarm(); clearTimeout(tv.d); tv.state = 'off'; tvSync(); }
 function tvOn(){
-  if (document.hidden || tv.state !== 'off') return;
+  if (document.hidden || tv.away || tv.state !== 'off') return;
   tv.state = 'on';
   tv.kind = Math.random() < 0.55 ? 'msg' : 'drama';
   tv.msg = pick(tv.kind === 'msg' ? CONTENT.tv : CONTENT.drama);
@@ -1063,17 +1064,23 @@ function tvOn(){
 function tvBox(){
   var screen = h('div',{class:'tv off','aria-live':'polite'});
   var off = h('button',{class:'btn',type:'button',onclick:tvOff},'끄기');
+  var turn = h('button',{class:'btn',type:'button',onclick:function(){
+    tv.away = !tv.away;
+    lsSet('crowley.tvaway', tv.away);
+    if (tv.away) tvOff(); else tvSync();
+  }});
   widgets.tv = function(){
     screen.className = 'tv ' + tv.state + ' ' + tv.kind;
     screen.replaceChildren(
       tv.state === 'on' ? h('span',null,tv.msg) :
       tv.state === 'scare' ? h('span',null,CONTENT.tvScare) :
-      h('span',null,'꺼져 있다.')
+      h('span',null, tv.away ? CONTENT.tvAway : '꺼져 있다.')
     );
     off.hidden = tv.state !== 'on';
+    turn.textContent = tv.away ? '다시 돌리기' : '텔레비전 돌려 놓기';
   };
   widgets.tv();
-  return h('div',{class:'tvwrap'}, screen, off);
+  return h('div',{class:'tvwrap'}, screen, h('div',{class:'row'}, off, turn));
 }
 
 function lineBox(label, lines, idle){
