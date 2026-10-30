@@ -465,7 +465,7 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-40)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-41)</p>
   <div class="ckpop" id="ckpop" role="dialog" aria-label="클리커" hidden></div>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
@@ -1516,6 +1516,7 @@ function ckRender(){
   }
   redraw('clktable');
 }
+ckRender();   /* 접속하자마자 소지품창을 그린다 (다시 열었을 때도 보이게) */
 function ckClose(){ var pop = $('#ckpop'); if (pop) pop.hidden = true; }
 function ckOpen(it){
   var C = CONTENT.clicker, pop = $('#ckpop'), rare = C.items[it.k].rare;
@@ -2090,7 +2091,7 @@ function spineStrip(){
 }
 function skyPeriod(){
   var hr = new Date().getHours();
-  return hr >= 5 && hr < 9 ? 'morning' : hr < 17 ? 'day' : hr < 20 ? 'evening' : 'night';
+  return hr < 5 ? 'night' : hr < 9 ? 'morning' : hr < 17 ? 'day' : hr < 20 ? 'evening' : 'night';
 }
 var STAR_POS = [[8,14],[20,30],[36,12],[44,40],[62,18],[72,44],[84,12],[92,36],[14,52],[56,56],[28,20],[78,26]];
 function windowBox(){
