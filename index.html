@@ -269,6 +269,7 @@ textarea{font:inherit; color:var(--ink); background:var(--room-deep); border:1px
 .ckring{width:130px;height:130px;margin:-65px 0 0 -65px;border-radius:50%;border:2px solid var(--teal)}
 .ckcnt{margin:0; font-family:var(--f-disp); font-size:28px; font-variant-numeric:tabular-nums; display:inline-block}
 .btn.warn{border-color:var(--crimson); color:#f0a0ae}
+.crpet{cursor:pointer}
 .cralbum{width:100%; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px}
 .albcard{display:grid; justify-items:center; gap:2px; text-align:center; min-width:0}
 .albcard svg{width:76px; height:76px}
@@ -464,7 +465,7 @@ body.hw{
     <p class="guestdesc" id="guestdesc" aria-live="polite">문을 하나 눌러보세요.</p>
   </section>
 
-  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-39)</p>
+  <p class="foot">방은 객식구가 늘어날 때마다 추가됩니다. (판 7-40)</p>
   <div class="ckpop" id="ckpop" role="dialog" aria-label="클리커" hidden></div>
   <p class="candytoast" id="candytoast" role="status" aria-live="polite" hidden></p>
 </main>
@@ -793,8 +794,8 @@ var CONTENT = {
     mixed: '아롱이',
     traits: ['꽃을 꽂은', '불꽃을 쓴', '두루마리를 안은', '그림자를 끄는', '거미줄 망토를 두른'],
     egg: '아직 알이다.',
-    pet: '쓰다듬기',
-    pets: ['{x}이(가) 눈을 가늘게 떴다. 행복해 보인다.', '{x}이(가) 손 아래에서 가만히 있다. 기분이 좋은 것 같다.', '{x}이(가) 조금 들썩였다. 행복해졌다.', '{x}이(가) 작게 몸을 떨며 기뻐한다.'],
+    pet: '쓰다듬기', petGeneric: '크리쳐',
+    pets: ['{x} 눈을 가늘게 떴다. 행복해 보인다.', '{x} 손 아래에서 가만히 있다. 기분이 좋은 것 같다.', '{x} 조금 들썩였다. 행복해졌다.', '{x} 작게 몸을 떨며 기뻐한다.'],
     petsEgg: ['알이 따뜻하다. 안에서 뭔가 기뻐하는 기분이 든다.', '알을 쓰다듬었다. 살짝 흔들린 것 같다.'],
     baby: '아기 ',
     growing: '무럭무럭 자라는 중이다.',
@@ -2966,6 +2967,7 @@ function crEnsure(){
   crBusy = true;
   setDoc(doc(fs, 'house', 'creature'), crZero(1)).catch(function(){}).then(function(){ setTimeout(function(){ crBusy = false; }, 5000); });
 }
+function josaGa(w){ var ch = w.charCodeAt(w.length - 1) - 44032; return (ch >= 0 && ch <= 11171 && ch % 28 !== 0) ? '이' : '가'; }
 function creatureBox(){
   var C = CONTENT.creature;
   var art = h('div',{class:'crart'});
@@ -2974,10 +2976,20 @@ function creatureBox(){
   var left = h('p',{class:'hint'});
   var said = h('p',{class:'flavor','aria-live':'polite'});
   var btns = h('div',{class:'crbtns'});
-  var petBtn = h('button',{class:'btn',type:'button',onclick:function(){
-    var c = crCounts(), n = crSum(c);
-    said.textContent = n < 1 ? pick(C.petsEgg) : pick(C.pets).replace('{x}', crName(c, crStage(n)));
-  }}, C.pet);
+  var petSaid = h('p',{class:'flavor','aria-live':'polite'});
+  function pet(){
+    if (!(canShare && fs) || S.off.creature) return;
+    var c = crCounts(), n = crSum(c), st = crStage(n);
+    if (n < 1){ petSaid.textContent = pick(C.petsEgg); }
+    else {
+      var x = st === 2 ? C.petGeneric : crName(c, st);
+      petSaid.textContent = pick(C.pets).replace('{x}', x + josaGa(x));
+    }
+    clickerTry();
+  }
+  art.classList.add('crpet'); art.setAttribute('role', 'button'); art.tabIndex = 0; art.setAttribute('aria-label', C.pet);
+  art.addEventListener('click', pet);
+  art.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pet(); } });
   var nth = h('p',{class:'hint crprog'});
   var albBtn = h('button',{class:'btn',type:'button',onclick:function(){ toggleAlbum(); }}, C.albumOpen);
   var albBox = h('div',{class:'cralbum'});
@@ -3023,10 +3035,10 @@ function creatureBox(){
   widgets.creature = function(){
     var off = !(canShare && fs) || S.off.creature;
     if (off){
-      art.textContent = ''; nameP.textContent = ''; prog.textContent = ''; left.textContent = C.notReady; btns.hidden = true; petBtn.hidden = true; lastSig = 'off';
+      art.textContent = ''; nameP.textContent = ''; prog.textContent = ''; left.textContent = C.notReady; btns.hidden = true; lastSig = 'off';
       return;
     }
-    btns.hidden = false; petBtn.hidden = false;
+    btns.hidden = false;
     if (crExpired() && !crResetting){
       crResetting = true;
       crRollOver().then(function(){ setTimeout(function(){ crResetting = false; }, 5000); });
@@ -3045,7 +3057,7 @@ function creatureBox(){
     if (!art.isConnected){ clearInterval(tick); return; }
     if (widgets.creature) widgets.creature();
   }, 30000);
-  return h('div',{class:'tvwrap',style:'width:100%'}, art, nameP, prog, nth, left, btns, petBtn, said, albBtn, albBox);
+  return h('div',{class:'tvwrap',style:'width:100%'}, art, petSaid, nameP, prog, nth, left, btns, said, albBtn, albBox);
 }
 
 /* ===== 책 읽기 (서재): 분야마다 한 사람, 전체 3명까지. 책은 읽기 시작할 때 랜덤으로 정해진다 ===== */
